@@ -1,21 +1,30 @@
-import { useState } from 'react';
-import { crearReserva, cancelarReserva, aISO, isoAInputs, formatoHora, TIPO_LABEL } from '../api';
+import { useEffect, useState } from 'react';
+import { crearReserva, cancelarReserva, getMateriasHabilitadas, aISO, isoAInputs, formatoHora, TIPO_LABEL } from '../api';
 
 export default function SalonModal({ salon, salones, usuarios, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [materias, setMaterias] = useState([]);
   const [form, setForm] = useState({
     docente_id: usuarioActual?.id || '',
     materia: '',
+    materia_id: '',
     fecha: '',
     horaInicio: '',
     horaFin: '',
   });
+
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [sugerencias, setSugerencias] = useState(null);
   const [exito, setExito] = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
+
+  useEffect(() => {
+    getMateriasHabilitadas()
+      .then(setMaterias)
+      .catch(() => setMaterias([]));
+  }, []);
 
   const ahora = new Date();
   const proximas = reservas.filter((r) => r.fin > ahora);
@@ -43,10 +52,17 @@ export default function SalonModal({ salon, salones, usuarios, reservas, usuario
         return;
       }
 
-      await crearReserva({ salon_id: salon.id, docente_id: form.docente_id, materia: form.materia, inicio, fin });
+      await crearReserva({
+        salon_id: salon.id,
+        docente_id: form.docente_id,
+        materia: form.materia,
+        materia_id: form.materia_id || undefined,
+        inicio,
+        fin,
+      });
 
       setExito('¡Reserva creada con éxito!');
-      setForm({ docente_id: usuarioActual?.id || '', materia: '', fecha: '', horaInicio: '', horaFin: '' });
+      setForm({ docente_id: usuarioActual?.id || '', materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '' });
       setMostrarForm(false);
       await onCambiado();
     } catch (err) {
@@ -154,14 +170,38 @@ export default function SalonModal({ salon, salones, usuarios, reservas, usuario
 
             <div className="campo">
               <label htmlFor="materia">Materia</label>
-              <input
-                id="materia"
-                type="text"
-                required
-                value={form.materia}
-                onChange={(e) => actualizar('materia', e.target.value)}
-                placeholder="Ej. Programación I"
-              />
+              {materias.length > 0 ? (
+                <select
+                  id="materia"
+                  required
+                  value={form.materia_id}
+                  onChange={(e) => {
+                    const m = materias.find((x) => x.id === e.target.value);
+                    setForm((f) => ({ ...f, materia_id: e.target.value, materia: m ? m.nombre : '' }));
+                    setError('');
+                    setSugerencias(null);
+                  }}
+                >
+                  <option value="" disabled>
+                    Selecciona una materia
+                  </option>
+                  {materias.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nombre}
+                      {m.carreras?.codigo ? ` (${m.carreras.codigo})` : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="materia"
+                  type="text"
+                  required
+                  value={form.materia}
+                  onChange={(e) => actualizar('materia', e.target.value)}
+                  placeholder="Ej. Programación I"
+                />
+              )}
             </div>
 
             <div className="campo-fila">

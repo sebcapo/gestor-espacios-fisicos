@@ -18,6 +18,7 @@ async function apiFetch(path, options = {}) {
 export const getSalones = () => apiFetch('/api/salones');
 export const getUsuarios = () => apiFetch('/api/usuarios');
 export const getReservas = () => apiFetch('/api/reservas');
+export const getMateriasHabilitadas = () => apiFetch('/api/materias/habilitadas');
 
 export const consultarAsistente = ({ mensaje, historial, docente_id, docente_nombre }) =>
   apiFetch('/api/asistente', {

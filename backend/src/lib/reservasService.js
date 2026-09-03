@@ -1,11 +1,12 @@
 const supabase = require('../supabaseClient');
 const { salonesAlternativos, horariosAlternativos } = require('./disponibilidad');
 const { validarHorario } = require('./horarioInstitucional');
+const { validarMateriaEspacio } = require('./academico');
 
 // Crea una reserva. Si hay choque de horario (23P01), devuelve sugerencias
 // en vez de solo un error. Usado tanto por POST /api/reservas como por el
 // asistente de IA.
-async function crearReserva({ salon_id, docente_id, materia, inicio, fin }) {
+async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio, fin }) {
   const periodo = `[${inicio},${fin})`;
 
   // La reserva debe caer dentro del horario en que la universidad está abierta.
@@ -14,10 +15,16 @@ async function crearReserva({ salon_id, docente_id, materia, inicio, fin }) {
     return { ok: false, status: 422, error: horario.motivo };
   }
 
+  // Si la materia exige un tipo de espacio concreto, el salón debe cumplirlo.
+  const compat = await validarMateriaEspacio(materia_id, salon_id);
+  if (!compat.ok) {
+    return { ok: false, status: 422, error: compat.motivo };
+  }
+
   const { data, error } = await supabase
     .from('reservas')
-    .insert({ salon_id, docente_id, materia, periodo })
-    .select('*, salones(nombre), usuarios(nombre)')
+    .insert({ salon_id, docente_id, materia, materia_id: materia_id || null, periodo })
+    .select('*, salones(nombre), usuarios(nombre), materias(nombre, codigo)')
     .single();
 
   if (!error) return { ok: true, reserva: data };
