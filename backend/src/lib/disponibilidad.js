@@ -1,4 +1,5 @@
 const supabase = require('../supabaseClient');
+const { franjasDelDia, diaSemanaDeFecha, OFFSET } = require('./horarioInstitucional');
 
 // Convierte el texto que devuelve Postgres para un tstzrange, ej:
 // ["2026-09-10 14:00:00+00","2026-09-10 16:00:00+00")
@@ -44,10 +45,10 @@ async function salonesAlternativos({ tipo, capacidadMinima, inicio, fin, excluir
 }
 
 // Busca huecos libres del mismo salón, mismo día, con la misma duración
-// solicitada, dentro de una jornada de 7am a 9pm.
+// solicitada, dentro del horario institucional de ese día.
 async function horariosAlternativos({ salonId, fecha, duracionMinutos, limite = 3 }) {
-  const inicioDia = new Date(`${fecha}T07:00:00`);
-  const finDia = new Date(`${fecha}T21:00:00`);
+  const franjas = await franjasDelDia(diaSemanaDeFecha(fecha));
+  if (franjas.length === 0) return [];
 
   const { data: reservasDia, error } = await supabase
     .from('reservas')
@@ -62,14 +63,20 @@ async function horariosAlternativos({ salonId, fecha, duracionMinutos, limite = 
   const sugerencias = [];
   const pasoMs = 30 * 60 * 1000;
   const duracionMs = duracionMinutos * 60 * 1000;
+  const aHora = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-  for (let t = inicioDia.getTime(); t + duracionMs <= finDia.getTime(); t += pasoMs) {
-    if (sugerencias.length >= limite) break;
-    const candidatoInicio = new Date(t);
-    const candidatoFin = new Date(t + duracionMs);
-    const seSolapa = ocupados.some((o) => candidatoInicio < o.fin && candidatoFin > o.inicio);
-    if (!seSolapa) {
-      sugerencias.push({ inicio: candidatoInicio.toISOString(), fin: candidatoFin.toISOString() });
+  for (const franja of franjas) {
+    const inicioFranja = new Date(`${fecha}T${aHora(franja.aperturaMin)}:00${OFFSET}`);
+    const finFranja = new Date(`${fecha}T${aHora(franja.cierreMin)}:00${OFFSET}`);
+
+    for (let t = inicioFranja.getTime(); t + duracionMs <= finFranja.getTime(); t += pasoMs) {
+      if (sugerencias.length >= limite) return sugerencias;
+      const candidatoInicio = new Date(t);
+      const candidatoFin = new Date(t + duracionMs);
+      const seSolapa = ocupados.some((o) => candidatoInicio < o.fin && candidatoFin > o.inicio);
+      if (!seSolapa) {
+        sugerencias.push({ inicio: candidatoInicio.toISOString(), fin: candidatoFin.toISOString() });
+      }
     }
   }
   return sugerencias;

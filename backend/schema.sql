@@ -65,3 +65,20 @@ create trigger trg_bloquear_cancelacion_fija
 before update on reservas
 for each row
 execute function bloquear_cancelacion_fija();
+
+-- Horario institucional: franjas en que la universidad está abierta, por día.
+-- dia_semana en estándar ISO: 1 = lunes ... 7 = domingo. Puede haber varias
+-- filas por día. Si un día no tiene fila activa, la U está cerrada ese día.
+-- Toda reserva debe caer completa dentro de una de estas franjas.
+create table horario_institucional (
+  id uuid primary key default gen_random_uuid(),
+  dia_semana smallint not null check (dia_semana between 1 and 7),
+  hora_apertura time not null,
+  hora_cierre time not null,
+  activo boolean not null default true,
+  created_at timestamptz not null default now(),
+
+  constraint franja_valida check (hora_apertura < hora_cierre)
+);
+
+create index idx_horario_dia on horario_institucional(dia_semana) where activo = true;
