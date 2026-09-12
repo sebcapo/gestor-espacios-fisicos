@@ -8,17 +8,19 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   const { data, error } = await supabase
     .from('reservas')
-    .select('*, salones(nombre), usuarios(nombre)')
+    .select('*, salones(nombre), usuarios(nombre), materias(nombre, codigo)')
     .eq('estado', 'PROGRAMADA');
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// POST /api/reservas - crea una reserva. Body: { salon_id, docente_id, materia, inicio, fin }
+// POST /api/reservas - crea una reserva.
+// Body: { salon_id, docente_id, materia, inicio, fin, materia_id? }
+// materia_id es opcional; si viene, la materia se valida contra el tipo de salón.
 // inicio/fin en formato ISO, ej: "2026-09-10T14:00:00-05:00"
 router.post('/', async (req, res) => {
-  const { salon_id, docente_id, materia, inicio, fin } = req.body;
+  const { salon_id, docente_id, materia, materia_id, inicio, fin } = req.body;
 
   if (!salon_id || !docente_id || !materia || !inicio || !fin) {
     return res.status(400).json({ error: 'Faltan campos: salon_id, docente_id, materia, inicio, fin' });
@@ -28,7 +30,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'La hora de inicio debe ser anterior a la hora de fin' });
   }
 
-  const resultado = await crearReservaService({ salon_id, docente_id, materia, inicio, fin });
+  const resultado = await crearReservaService({ salon_id, docente_id, materia, materia_id, inicio, fin });
 
   if (resultado.ok) return res.status(201).json(resultado.reserva);
 
