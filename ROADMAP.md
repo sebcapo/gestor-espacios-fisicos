@@ -7,9 +7,15 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
 
 ## ✅ Fase 0 — MVP (hecho)
 
-- ✅ Esquema en Postgres: `usuarios`, `salones`, `reservas`.
-- ✅ Anti-solape de reservas por constraint `EXCLUDE USING gist`.
+- ✅ Esquema en SQLite local (un solo archivo, sin cuentas ni credenciales
+  externas): `usuarios`, `salones`, `reservas`, `horario_institucional`,
+  `carreras`, `semestres`, `materias`.
+- ✅ Anti-solape de reservas por disparadores (`trg_no_solape_insert`/`_update`).
 - ✅ Trigger que protege las clases fijas contra cancelación.
+- ✅ Horario institucional configurable por día de la semana; toda reserva se
+  valida contra él.
+- ✅ Modelo académico: carreras, semestres (uno vigente), materias habilitadas
+  por semestre; la reserva puede referenciar una materia real.
 - ✅ API REST: salones, usuarios, reservas (crear / listar / cancelar).
 - ✅ Al chocar una reserva, la API sugiere otros salones y otros horarios libres.
 - ✅ Asistente IA (Groq + tool calling): busca disponibilidad y crea reservas.
@@ -23,13 +29,7 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
 **Objetivo:** que el sistema deje de asumir cosas y sea seguro para varios usuarios.
 
 - 🔲 **Autenticación real.** Hoy el usuario se elige en un `<select>`; cualquiera
-  actúa como cualquiera. Login (Supabase Auth) + sesión + rol (`DOCENTE` / `ADMIN`).
-- 🔲 **Horario institucional configurable.** Hoy la jornada está fija en el código
-  (7am–9pm). Tabla de apertura/cierre por día de la semana y validación de que toda
-  reserva caiga dentro de la U abierta. → *ver rama `feat/horario-institucional`*
-- 🔲 **Modelo académico.** Hoy `reservas.materia` es texto libre. Añadir `carreras`,
-  `materias` y `semestres`, con las **materias habilitadas** por semestre vigente.
-  La reserva referencia una materia real. → *ver rama `feat/modelo-academico`*
+  actúa como cualquiera. Login + sesión + rol (`DOCENTE` / `ADMIN`).
 - 🔲 **Capacidad vs. asistentes.** Validar que la capacidad del salón alcance para el
   grupo al crear la reserva.
 - 🔲 **CRUD de administración.** Pantallas para que un `ADMIN` gestione salones y
@@ -77,9 +77,11 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
 
 - 🔲 Tests del servicio de reservas y del motor de restricciones (casos límite).
 - 🔲 CI en GitHub Actions (lint + tests).
-- 🔲 Optimizar la búsqueda de disponibilidad (hoy hace N+1 consultas a Supabase).
-- 🔲 Deduplicar helpers repetidos entre backend y frontend (`parseRango`).
-- 🔲 Despliegue: frontend (Vercel/Netlify), backend (Render/Railway), variables de entorno.
+- 🔲 Optimizar la búsqueda de disponibilidad (hoy hace N+1 consultas a SQLite:
+  una por salón candidato en vez de una sola consulta con los solapes).
+- 🔲 Despliegue: frontend (Vercel/Netlify), backend con su archivo SQLite en un
+  volumen persistente (Render/Railway/Fly.io) o, si hace falta compartirlo entre
+  varias instancias, evaluar una base de datos gestionada.
 
 ---
 

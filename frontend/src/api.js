@@ -35,14 +35,6 @@ export const cancelarReserva = (id, motivo) =>
     body: JSON.stringify({ motivo }),
   });
 
-// Convierte el texto que devuelve Postgres para un tstzrange, ej:
-// ["2026-09-10 14:00:00+00","2026-09-10 16:00:00+00")
-// en { inicio: Date, fin: Date }
-export function parseRango(rangoTexto) {
-  const match = rangoTexto.match(/^[[(]"?([^",)\]]+)"?,"?([^",)\]]+)"?[)\]]$/);
-  return { inicio: new Date(match[1]), fin: new Date(match[2]) };
-}
-
 export const TIPO_LABEL = {
   SALON: 'Salón',
   SALA_COMPUTO: 'Sala de cómputo',

@@ -1,4 +1,4 @@
-const supabase = require('../supabaseClient');
+const db = require('../db');
 
 // Colombia no tiene horario de verano: el offset -05:00 es fijo todo el año.
 const OFFSET = '-05:00';
@@ -45,15 +45,13 @@ function diaSemanaDeFecha(fecha) {
 
 // Franjas activas de un día: [{ aperturaMin, cierreMin, hora_apertura, hora_cierre }]
 async function franjasDelDia(diaSemana) {
-  const { data, error } = await supabase
-    .from('horario_institucional')
-    .select('hora_apertura, hora_cierre')
-    .eq('dia_semana', diaSemana)
-    .eq('activo', true)
-    .order('hora_apertura');
+  const filas = db
+    .prepare(
+      'select hora_apertura, hora_cierre from horario_institucional where dia_semana = ? and activo = 1 order by hora_apertura',
+    )
+    .all(diaSemana);
 
-  if (error) throw error;
-  return data.map((f) => ({
+  return filas.map((f) => ({
     hora_apertura: f.hora_apertura,
     hora_cierre: f.hora_cierre,
     aperturaMin: horaAMinutos(f.hora_apertura),

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { getSalones, getUsuarios, getReservas, parseRango, TIPO_LABEL } from '../api';
+import { getSalones, getUsuarios, getReservas, TIPO_LABEL } from '../api';
 import SalonModal from './SalonModal';
 
 function claveOrden(ubicacion) {
@@ -38,7 +38,8 @@ export default function MapaSalones({ usuarioActual }) {
   const reservasPorSalon = useMemo(() => {
     const mapa = new Map();
     for (const r of reservas) {
-      const { inicio, fin } = parseRango(r.periodo);
+      const inicio = new Date(r.inicio);
+      const fin = new Date(r.fin);
       const lista = mapa.get(r.salon_id) || [];
       lista.push({ ...r, inicio, fin });
       mapa.set(r.salon_id, lista);

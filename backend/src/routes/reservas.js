@@ -1,18 +1,37 @@
 const express = require('express');
-const supabase = require('../supabaseClient');
-const { crearReserva: crearReservaService } = require('../lib/reservasService');
+const db = require('../db');
+const { crearReserva: crearReservaService, reservaConDetalle } = require('../lib/reservasService');
 
 const router = express.Router();
 
 // GET /api/reservas - lista todas las reservas programadas, con nombre del salón y del docente
-router.get('/', async (req, res) => {
-  const { data, error } = await supabase
-    .from('reservas')
-    .select('*, salones(nombre), usuarios(nombre), materias(nombre, codigo)')
-    .eq('estado', 'PROGRAMADA');
+router.get('/', (req, res) => {
+  try {
+    const filas = db
+      .prepare(
+        `select
+           r.*,
+           json_object('nombre', s.nombre) as salones,
+           json_object('nombre', u.nombre) as usuarios,
+           case when m.id is null then null else json_object('nombre', m.nombre, 'codigo', m.codigo) end as materias
+         from reservas r
+         join salones s on s.id = r.salon_id
+         join usuarios u on u.id = r.docente_id
+         left join materias m on m.id = r.materia_id
+         where r.estado = 'PROGRAMADA'`,
+      )
+      .all()
+      .map((fila) => ({
+        ...fila,
+        salones: JSON.parse(fila.salones),
+        usuarios: JSON.parse(fila.usuarios),
+        materias: fila.materias ? JSON.parse(fila.materias) : null,
+      }));
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.json(data);
+    res.json(filas);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // POST /api/reservas - crea una reserva.
@@ -39,29 +58,28 @@ router.post('/', async (req, res) => {
 });
 
 // PATCH /api/reservas/:id/cancelar - cancela una reserva (bloqueado si es_fija = true)
-router.patch('/:id/cancelar', async (req, res) => {
+router.patch('/:id/cancelar', (req, res) => {
   const { id } = req.params;
   const { motivo } = req.body;
 
-  const { data, error } = await supabase
-    .from('reservas')
-    .update({
-      estado: 'CANCELADA',
-      motivo_cancelacion: motivo || null,
-      cancelada_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    const { changes } = db
+      .prepare(
+        `update reservas
+         set estado = 'CANCELADA', motivo_cancelacion = ?, cancelada_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+         where id = ?`,
+      )
+      .run(motivo || null, id);
 
-  if (error) {
-    if (error.message.includes('clase fija')) {
+    if (changes === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+    res.json(reservaConDetalle(id));
+  } catch (error) {
+    if (error.message && error.message.includes('clase fija')) {
       return res.status(403).json({ error: 'No se puede cancelar: es una clase fija' });
     }
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
-
-  res.json(data);
 });
 
 module.exports = router;
