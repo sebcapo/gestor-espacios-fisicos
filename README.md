@@ -36,6 +36,8 @@ frontend  ──HTTP──>  backend  ──>  SQLite (backend/data/gestor.db)
   disparador que compara `inicio`/`fin` contra las reservas existentes.
 - **Clase fija protegida**: otro disparador bloquea la cancelación de reservas
   con `es_fija = 1`.
+- **Capacidad vs. asistentes**: si la reserva trae `asistentes_estimados`, se
+  rechaza con `422` cuando supera la capacidad del salón.
 
 ### Autenticación
 

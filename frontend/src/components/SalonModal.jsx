@@ -10,6 +10,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     fecha: '',
     horaInicio: '',
     horaFin: '',
+    asistentes: '',
   });
 
   const [enviando, setEnviando] = useState(false);
@@ -57,10 +58,11 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         materia_id: form.materia_id || undefined,
         inicio,
         fin,
+        asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
       });
 
       setExito('¡Reserva creada con éxito!');
-      setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '' });
+      setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '', asistentes: '' });
       setMostrarForm(false);
       await onCambiado();
     } catch (err) {
@@ -117,6 +119,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
               <li key={r.id} className="reserva-item">
                 <div>
                   <strong>{formatoHora.format(r.inicio)}</strong> — {r.materia} ({r.usuarios?.nombre})
+                  {r.asistentes_estimados ? ` · ${r.asistentes_estimados} pers.` : ''}
                   {r.es_fija && <span className="badge-fija">clase fija</span>}
                 </div>
 
@@ -211,6 +214,19 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
                 <label htmlFor="horaFin">Fin</label>
                 <input id="horaFin" type="time" required value={form.horaFin} onChange={(e) => actualizar('horaFin', e.target.value)} />
               </div>
+            </div>
+
+            <div className="campo">
+              <label htmlFor="asistentes">Nº de asistentes (opcional)</label>
+              <input
+                id="asistentes"
+                type="number"
+                min="1"
+                max={salon.capacidad}
+                placeholder={`Máx. ${salon.capacidad}`}
+                value={form.asistentes}
+                onChange={(e) => actualizar('asistentes', e.target.value)}
+              />
             </div>
 
             <div className="modal-acciones">

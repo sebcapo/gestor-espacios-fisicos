@@ -34,11 +34,16 @@ function reservaConDetalle(id) {
 
 // Crea una reserva. Si hay choque de horario, devuelve sugerencias en vez de
 // solo un error. Usado tanto por POST /api/reservas como por el asistente de IA.
-async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio, fin }) {
+async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados }) {
   // La reserva debe caer dentro del horario en que la universidad está abierta.
   const horario = await validarHorario({ inicio, fin });
   if (!horario.ok) {
     return { ok: false, status: 422, error: horario.motivo };
+  }
+
+  const salon = db.prepare('select * from salones where id = ? and activo = 1').get(salon_id);
+  if (!salon) {
+    return { ok: false, status: 404, error: 'Salón no encontrado' };
   }
 
   // Si la materia exige un tipo de espacio concreto, el salón debe cumplirlo.
@@ -47,26 +52,35 @@ async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio,
     return { ok: false, status: 422, error: compat.motivo };
   }
 
+  // El salón debe tener cupo para el número de asistentes estimado (mismo
+  // criterio de "capacidad mínima" que ya usa buscar_disponibilidad).
+  if (asistentes_estimados != null && salon.capacidad < asistentes_estimados) {
+    return {
+      ok: false,
+      status: 422,
+      error: `El salón "${salon.nombre}" tiene capacidad para ${salon.capacidad} personas; se estimaron ${asistentes_estimados}`,
+    };
+  }
+
   const id = randomUUID();
   try {
     db.prepare(
-      `insert into reservas (id, salon_id, docente_id, materia, materia_id, inicio, fin)
-       values (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(id, salon_id, docente_id, materia, materia_id || null, inicio, fin);
+      `insert into reservas (id, salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados)
+       values (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, salon_id, docente_id, materia, materia_id || null, inicio, fin, asistentes_estimados || null);
 
     return { ok: true, reserva: reservaConDetalle(id) };
   } catch (error) {
     // El disparador trg_no_solape_insert aborta el INSERT si ya hay una
     // reserva PROGRAMADA que se cruza en ese salón (ver schema.sql).
     if (error.message && error.message.includes('reserva_solapada')) {
-      const salon = db.prepare('select * from salones where id = ?').get(salon_id);
       const fecha = inicio.split('T')[0];
       const duracionMinutos = (new Date(fin) - new Date(inicio)) / 60000;
 
       const [otrosSalones, otrosHorarios] = await Promise.all([
         salonesAlternativos({
           tipo: salon.tipo,
-          capacidadMinima: salon.capacidad,
+          capacidadMinima: asistentes_estimados || salon.capacidad,
           inicio,
           fin,
           excluirSalonId: salon_id,
