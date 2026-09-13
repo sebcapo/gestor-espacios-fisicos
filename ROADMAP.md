@@ -24,12 +24,16 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
 
 ---
 
-## 🔲 Fase 1 — Base para operar de verdad
+## 🚧 Fase 1 — Base para operar de verdad
 
 **Objetivo:** que el sistema deje de asumir cosas y sea seguro para varios usuarios.
 
-- 🔲 **Autenticación real.** Hoy el usuario se elige en un `<select>`; cualquiera
-  actúa como cualquiera. Login + sesión + rol (`DOCENTE` / `ADMIN`).
+- ✅ **Autenticación real.** Login con correo/contraseña (`scrypt` + cookie de
+  sesión httpOnly, todo en SQLite). El backend obtiene el usuario de la
+  sesión, nunca del body: `POST /api/reservas` y `PATCH /:id/cancelar` ya no
+  reciben `docente_id` del cliente, y cancelar una reserva ajena da `403`
+  salvo que quien cancela sea `ADMIN`. Se quitó el selector "Estás usando el
+  sistema como:".
 - 🔲 **Capacidad vs. asistentes.** Validar que la capacidad del salón alcance para el
   grupo al crear la reserva.
 - 🔲 **CRUD de administración.** Pantallas para que un `ADMIN` gestione salones y

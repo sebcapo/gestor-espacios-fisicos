@@ -10,10 +10,23 @@ create table usuarios (
   id text primary key default (lower(hex(randomblob(16)))),
   nombre text not null,
   email text not null unique,
+  password_hash text not null default '',
   rol text not null check (rol in ('DOCENTE', 'ADMIN')),
   activo integer not null default 1,
   created_at text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
+
+-- Sesiones de login. El token es el propio valor de la cookie httpOnly que
+-- recibe el navegador; no se guarda nada más sensible que la referencia al
+-- usuario y la fecha de expiración.
+create table sesiones (
+  token text primary key,
+  usuario_id text not null references usuarios(id),
+  creado_at text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  expira_at text not null
+);
+
+create index idx_sesiones_usuario on sesiones(usuario_id);
 
 -- Tabla de salones
 create table salones (

@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { crearReserva, cancelarReserva, getMateriasHabilitadas, aISO, isoAInputs, formatoHora, TIPO_LABEL } from '../api';
 
-export default function SalonModal({ salon, salones, usuarios, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
+export default function SalonModal({ salon, salones, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [materias, setMaterias] = useState([]);
   const [form, setForm] = useState({
-    docente_id: usuarioActual?.id || '',
     materia: '',
     materia_id: '',
     fecha: '',
@@ -54,7 +53,6 @@ export default function SalonModal({ salon, salones, usuarios, reservas, usuario
 
       await crearReserva({
         salon_id: salon.id,
-        docente_id: form.docente_id,
         materia: form.materia,
         materia_id: form.materia_id || undefined,
         inicio,
@@ -62,7 +60,7 @@ export default function SalonModal({ salon, salones, usuarios, reservas, usuario
       });
 
       setExito('¡Reserva creada con éxito!');
-      setForm({ docente_id: usuarioActual?.id || '', materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '' });
+      setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '' });
       setMostrarForm(false);
       await onCambiado();
     } catch (err) {
@@ -154,19 +152,9 @@ export default function SalonModal({ salon, salones, usuarios, reservas, usuario
           </button>
         ) : (
           <form className="form-reserva" onSubmit={enviar}>
-            <div className="campo">
-              <label htmlFor="docente">Docente</label>
-              <select id="docente" required value={form.docente_id} onChange={(e) => actualizar('docente_id', e.target.value)}>
-                <option value="" disabled>
-                  Selecciona un docente
-                </option>
-                {usuarios.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.nombre} ({u.rol})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="reservando-como">
+              Reservando como <strong>{usuarioActual?.nombre}</strong>
+            </p>
 
             <div className="campo">
               <label htmlFor="materia">Materia</label>

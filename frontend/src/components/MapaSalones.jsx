@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { getSalones, getUsuarios, getReservas, TIPO_LABEL } from '../api';
+import { getSalones, getReservas, TIPO_LABEL } from '../api';
 import SalonModal from './SalonModal';
 
 function claveOrden(ubicacion) {
@@ -11,17 +11,15 @@ function claveOrden(ubicacion) {
 
 export default function MapaSalones({ usuarioActual }) {
   const [salones, setSalones] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | listo | error
   const [errorMsg, setErrorMsg] = useState('');
   const [salonSeleccionadoId, setSalonSeleccionadoId] = useState(null);
 
   const recargar = useCallback(() => {
-    return Promise.all([getSalones(), getUsuarios(), getReservas()])
-      .then(([s, u, r]) => {
+    return Promise.all([getSalones(), getReservas()])
+      .then(([s, r]) => {
         setSalones(s);
-        setUsuarios(u);
         setReservas(r);
         setEstado('listo');
       })
@@ -106,7 +104,6 @@ export default function MapaSalones({ usuarioActual }) {
         <SalonModal
           salon={salonSeleccionado}
           salones={salones}
-          usuarios={usuarios}
           reservas={reservasPorSalon.get(salonSeleccionado.id) || []}
           usuarioActual={usuarioActual}
           onClose={() => setSalonSeleccionadoId(null)}

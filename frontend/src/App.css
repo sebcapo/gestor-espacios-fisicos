@@ -53,19 +53,58 @@ body::after {
   margin: 0;
 }
 
-.selector-usuario {
+.usuario-sesion {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-h);
+}
+
+/* Pantalla de login */
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text-h);
+}
+
+.login-subtitulo {
+  margin: -8px 0 4px;
   font-size: 13px;
   color: var(--text);
 }
 
-.selector-usuario select {
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
+.reservando-como {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.reservando-como strong {
   color: var(--text-h);
 }
 

@@ -34,15 +34,17 @@ router.get('/', (req, res) => {
   }
 });
 
-// POST /api/reservas - crea una reserva.
-// Body: { salon_id, docente_id, materia, inicio, fin, materia_id? }
+// POST /api/reservas - crea una reserva a nombre del usuario autenticado.
+// Body: { salon_id, materia, inicio, fin, materia_id? }
+// El docente es siempre el de la sesión (requireAuth), nunca el que mande el cliente.
 // materia_id es opcional; si viene, la materia se valida contra el tipo de salón.
 // inicio/fin en formato ISO, ej: "2026-09-10T14:00:00-05:00"
 router.post('/', async (req, res) => {
-  const { salon_id, docente_id, materia, materia_id, inicio, fin } = req.body;
+  const { salon_id, materia, materia_id, inicio, fin } = req.body;
+  const docente_id = req.usuario.id;
 
-  if (!salon_id || !docente_id || !materia || !inicio || !fin) {
-    return res.status(400).json({ error: 'Faltan campos: salon_id, docente_id, materia, inicio, fin' });
+  if (!salon_id || !materia || !inicio || !fin) {
+    return res.status(400).json({ error: 'Faltan campos: salon_id, materia, inicio, fin' });
   }
 
   if (new Date(inicio) >= new Date(fin)) {
@@ -57,10 +59,20 @@ router.post('/', async (req, res) => {
   res.status(status).json(body);
 });
 
-// PATCH /api/reservas/:id/cancelar - cancela una reserva (bloqueado si es_fija = true)
+// PATCH /api/reservas/:id/cancelar - cancela una reserva.
+// Solo el docente dueño de la reserva o un ADMIN pueden cancelarla;
+// bloqueado además si es_fija = true (lo aplica el trigger de la BD).
 router.patch('/:id/cancelar', (req, res) => {
   const { id } = req.params;
   const { motivo } = req.body;
+
+  const reserva = db.prepare('select docente_id from reservas where id = ?').get(id);
+  if (!reserva) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+  const esDueño = reserva.docente_id === req.usuario.id;
+  if (!esDueño && req.usuario.rol !== 'ADMIN') {
+    return res.status(403).json({ error: 'Solo puedes cancelar tus propias reservas' });
+  }
 
   try {
     const { changes } = db
