@@ -152,6 +152,11 @@ frontend/
     components/         LoginForm, MapaSalones, SalonModal, ChatAsistente
 ```
 
+## Cómo probar
+
+Guía paso a paso (levantar el aplicativo, iniciar sesión, crear/cancelar
+reservas, probar el asistente de IA): ver [PROBAR.md](./PROBAR.md).
+
 ## Hoja de ruta
 
 Ver [ROADMAP.md](./ROADMAP.md).
