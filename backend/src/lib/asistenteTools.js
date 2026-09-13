@@ -1,4 +1,4 @@
-const supabase = require('../supabaseClient');
+const db = require('../db');
 const { haySolape } = require('./disponibilidad');
 const { crearReserva } = require('./reservasService');
 
@@ -9,12 +9,17 @@ async function buscarDisponibilidad({ tipo, capacidad_minima, fecha, hora_inicio
   const inicio = `${fecha}T${hora_inicio}:00${OFFSET}`;
   const fin = `${fecha}T${hora_fin}:00${OFFSET}`;
 
-  let query = supabase.from('salones').select('*').eq('activo', true);
-  if (tipo) query = query.eq('tipo', tipo);
-  if (capacidad_minima) query = query.gte('capacidad', capacidad_minima);
-
-  const { data: candidatos, error } = await query;
-  if (error) throw error;
+  let sql = 'select * from salones where activo = 1';
+  const params = [];
+  if (tipo) {
+    sql += ' and tipo = ?';
+    params.push(tipo);
+  }
+  if (capacidad_minima) {
+    sql += ' and capacidad >= ?';
+    params.push(capacidad_minima);
+  }
+  const candidatos = db.prepare(sql).all(...params);
 
   const libres = [];
   for (const s of candidatos) {

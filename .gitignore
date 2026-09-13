@@ -5,3 +5,6 @@ node_modules/
 dist/
 **/dist/
 .DS_Store
+
+# base de datos local (SQLite)
+backend/data/

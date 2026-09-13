@@ -1,39 +1,29 @@
-const supabase = require('../supabaseClient');
+const db = require('../db');
 const { franjasDelDia, diaSemanaDeFecha, OFFSET } = require('./horarioInstitucional');
-
-// Convierte el texto que devuelve Postgres para un tstzrange, ej:
-// ["2026-09-10 14:00:00+00","2026-09-10 16:00:00+00")
-// en { inicio: Date, fin: Date }
-function parseRango(rangoTexto) {
-  const match = rangoTexto.match(/^[[(]"?([^",)\]]+)"?,"?([^",)\]]+)"?[)\]]$/);
-  return { inicio: new Date(match[1]), fin: new Date(match[2]) };
-}
 
 // ¿Ese salón ya tiene una reserva PROGRAMADA que se solape con [inicio, fin)?
 async function haySolape(salonId, inicio, fin) {
-  const { data, error } = await supabase
-    .from('reservas')
-    .select('id')
-    .eq('salon_id', salonId)
-    .eq('estado', 'PROGRAMADA')
-    .filter('periodo', 'ov', `[${inicio},${fin})`);
+  const fila = db
+    .prepare(
+      `select 1 from reservas
+       where salon_id = ? and estado = 'PROGRAMADA' and inicio < ? and fin > ?
+       limit 1`,
+    )
+    .get(salonId, fin, inicio);
 
-  if (error) throw error;
-  return data.length > 0;
+  return Boolean(fila);
 }
 
 // Busca otros salones del mismo tipo (y con capacidad suficiente) que estén
 // libres en ese horario.
 async function salonesAlternativos({ tipo, capacidadMinima, inicio, fin, excluirSalonId, limite = 3 }) {
-  const { data: candidatos, error } = await supabase
-    .from('salones')
-    .select('*')
-    .eq('activo', true)
-    .eq('tipo', tipo)
-    .gte('capacidad', capacidadMinima)
-    .neq('id', excluirSalonId);
-
-  if (error) throw error;
+  const candidatos = db
+    .prepare(
+      `select * from salones
+       where activo = 1 and tipo = ? and capacidad >= ? and id != ?
+       order by capacidad asc`,
+    )
+    .all(tipo, capacidadMinima, excluirSalonId);
 
   const libres = [];
   for (const salon of candidatos) {
@@ -50,15 +40,11 @@ async function horariosAlternativos({ salonId, fecha, duracionMinutos, limite = 
   const franjas = await franjasDelDia(diaSemanaDeFecha(fecha));
   if (franjas.length === 0) return [];
 
-  const { data: reservasDia, error } = await supabase
-    .from('reservas')
-    .select('periodo')
-    .eq('salon_id', salonId)
-    .eq('estado', 'PROGRAMADA');
+  const reservasDia = db
+    .prepare("select inicio, fin from reservas where salon_id = ? and estado = 'PROGRAMADA'")
+    .all(salonId);
 
-  if (error) throw error;
-
-  const ocupados = reservasDia.map((r) => parseRango(r.periodo));
+  const ocupados = reservasDia.map((r) => ({ inicio: new Date(r.inicio), fin: new Date(r.fin) }));
 
   const sugerencias = [];
   const pasoMs = 30 * 60 * 1000;

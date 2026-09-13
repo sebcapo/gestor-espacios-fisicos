@@ -13,61 +13,72 @@ choques de horario, y consultar disponibilidad con un asistente conversacional.
 |---|---|---|
 | Frontend | React 19 + Vite | [`frontend/`](./frontend) |
 | Backend | Node.js + Express (API REST) | [`backend/`](./backend) |
-| Base de datos | PostgreSQL gestionado por Supabase | [`backend/schema.sql`](./backend/schema.sql) |
+| Base de datos | SQLite local, un solo archivo (`node:sqlite`) | [`backend/schema.sql`](./backend/schema.sql) |
 | Asistente IA | Groq (tool calling) | [`backend/src/routes/asistente.js`](./backend/src/routes/asistente.js) |
 
 El frontend habla solo con el backend (`/api/...`); el backend es el único que
-accede a Supabase y a Groq.
+accede a la base de datos y a Groq. La base de datos es un archivo SQLite local
+(`backend/data/gestor.db`, fuera de git) — no hay nada que crear en la nube ni
+credenciales de base de datos que gestionar: es un proyecto académico, así que
+se optó por lo más simple de levantar en cualquier máquina.
 
 ```
-frontend  ──HTTP──>  backend  ──>  Supabase (Postgres)
+frontend  ──HTTP──>  backend  ──>  SQLite (backend/data/gestor.db)
                              ──>  Groq (LLM)
 ```
 
 ### Reglas de negocio que ya viven en la base de datos
 
-- **Sin doble reserva**: un `EXCLUDE USING gist` sobre `(salon_id, periodo)` impide
-  dos reservas `PROGRAMADA` que se solapen en el mismo salón. Postgres lo valida en
-  cada `INSERT`, sin condiciones de carrera.
-- **Clase fija protegida**: un trigger bloquea la cancelación de reservas con
-  `es_fija = true`.
+- **Sin doble reserva**: un disparador (`trg_no_solape_insert` / `_update`) aborta
+  el `INSERT`/`UPDATE` si ya existe una reserva `PROGRAMADA` que se cruza en el
+  mismo salón. Es el equivalente en SQLite del `EXCLUDE USING gist` de Postgres:
+  SQLite no tiene restricciones de exclusión nativas, así que se hace con un
+  disparador que compara `inicio`/`fin` contra las reservas existentes.
+- **Clase fija protegida**: otro disparador bloquea la cancelación de reservas
+  con `es_fija = 1`.
 
 ## Requisitos previos
 
-- Node.js 20 o superior
-- Una cuenta de [Supabase](https://supabase.com) con un proyecto creado
-- Una API key de [Groq](https://console.groq.com) (para el asistente)
+- **Node.js 24 o superior** (el backend usa el módulo nativo `node:sqlite`;
+  con versiones más viejas de Node no arranca — no hace falta instalar nada
+  aparte, no hay dependencias nativas que compilar).
+- Una API key de [Groq](https://console.groq.com) (para el asistente).
 
 ## Puesta en marcha
 
-### 1. Base de datos (Supabase)
-
-En el **SQL Editor** del proyecto de Supabase, ejecuta en orden:
-
-1. [`backend/schema.sql`](./backend/schema.sql) — crea las tablas, constraints y triggers.
-2. [`backend/seed_salones.sql`](./backend/seed_salones.sql) — carga los salones de la sede.
-3. [`backend/seed_usuarios.sql`](./backend/seed_usuarios.sql) — carga el equipo y docentes de prueba.
-4. (Opcional) [`backend/seed_clase_fija_prueba.sql`](./backend/seed_clase_fija_prueba.sql) — una clase fija de ejemplo.
-
-### 2. Backend
+### 1. Backend
 
 ```bash
 cd backend
 npm install
-cp .env.example .env      # y completa los valores (ver abajo)
-npm run dev               # arranca en http://localhost:3001
+cp .env.example .env      # y pon tu GROQ_API_KEY (ver abajo)
+npm run dev                # arranca en http://localhost:3001
+```
+
+La primera vez que arranca, el backend crea `backend/data/gestor.db` y aplica
+`schema.sql` automáticamente. Para cargar datos de ejemplo (salones, usuarios,
+horario institucional, carreras/materias):
+
+```bash
+npm run seed
 ```
 
 Variables de entorno (`backend/.env`):
 
 | Variable | Descripción |
 |---|---|
-| `SUPABASE_URL` | URL del proyecto Supabase |
-| `SUPABASE_ANON_KEY` | Anon key del proyecto Supabase |
 | `GROQ_API_KEY` | API key de Groq (asistente) |
 | `PORT` | Puerto del backend (por defecto `3001`) |
+| `DB_PATH` | Opcional — ruta del archivo SQLite (por defecto `backend/data/gestor.db`) |
 
-### 3. Frontend
+Otros comandos útiles:
+
+| Comando | Qué hace |
+|---|---|
+| `npm run db:reset` | Borra la base de datos local para empezar de cero |
+| `npm run db:reset -- --seed` | Borra y vuelve a cargar los datos de ejemplo en un solo paso |
+
+### 2. Frontend
 
 ```bash
 cd frontend
@@ -87,18 +98,27 @@ npm run dev               # arranca en http://localhost:5173
 | `POST` | `/api/reservas` | Crea una reserva; ante choque devuelve sugerencias |
 | `PATCH` | `/api/reservas/:id/cancelar` | Cancela una reserva (bloqueado si es fija) |
 | `POST` | `/api/asistente` | Turno de conversación con el asistente de reservas |
+| `GET` | `/api/horario-institucional` | Franjas de apertura/cierre por día |
+| `GET` | `/api/carreras` | Carreras activas |
+| `GET` | `/api/semestres` | Semestres (`?estado=VIGENTE` para filtrar) |
+| `GET` | `/api/materias` | Materias activas, con su carrera |
+| `GET` | `/api/materias/habilitadas` | Materias del semestre vigente |
 
 ## Estructura del repositorio
 
 ```
 backend/
-  schema.sql            Esquema completo de la base de datos
+  schema.sql            Esquema completo de la base de datos (SQLite)
   seed_*.sql            Datos iniciales (salones, usuarios, ejemplos)
+  data/                 Base de datos local (gestor.db) — no va en git
+  scripts/
+    seed.js             Corre todos los seed_*.sql en orden
+    reset-db.js          Borra la base de datos local
   src/
     index.js            Arranque de Express y montaje de rutas
-    supabaseClient.js   Cliente de Supabase
+    db.js               Abre/crea la base SQLite (backend/data/gestor.db)
     groqClient.js       Cliente de Groq
-    routes/             Rutas HTTP (salones, reservas, usuarios, asistente)
+    routes/             Rutas HTTP (salones, reservas, usuarios, asistente, ...)
     lib/                Lógica de negocio (disponibilidad, servicio de reservas, tools del asistente)
 frontend/
   src/
@@ -113,4 +133,4 @@ Ver [ROADMAP.md](./ROADMAP.md).
 
 ## Equipo
 
-Proyecto de Ingeniería — FUMC Medellín. Juan Diego · Camilo · Sebastián.
+Proyecto de Ingeniería de Software — FUMC Medellín. Juan Diego Guayara · Camilo Arango · Sebastián Villafañe.
