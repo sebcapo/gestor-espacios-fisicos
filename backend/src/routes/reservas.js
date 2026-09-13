@@ -35,12 +35,13 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/reservas - crea una reserva a nombre del usuario autenticado.
-// Body: { salon_id, materia, inicio, fin, materia_id? }
+// Body: { salon_id, materia, inicio, fin, materia_id?, asistentes_estimados? }
 // El docente es siempre el de la sesión (requireAuth), nunca el que mande el cliente.
 // materia_id es opcional; si viene, la materia se valida contra el tipo de salón.
+// asistentes_estimados es opcional; si viene, se rechaza si supera la capacidad del salón.
 // inicio/fin en formato ISO, ej: "2026-09-10T14:00:00-05:00"
 router.post('/', async (req, res) => {
-  const { salon_id, materia, materia_id, inicio, fin } = req.body;
+  const { salon_id, materia, materia_id, inicio, fin, asistentes_estimados } = req.body;
   const docente_id = req.usuario.id;
 
   if (!salon_id || !materia || !inicio || !fin) {
@@ -51,7 +52,11 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'La hora de inicio debe ser anterior a la hora de fin' });
   }
 
-  const resultado = await crearReservaService({ salon_id, docente_id, materia, materia_id, inicio, fin });
+  if (asistentes_estimados != null && (!Number.isInteger(asistentes_estimados) || asistentes_estimados <= 0)) {
+    return res.status(400).json({ error: 'asistentes_estimados debe ser un entero positivo' });
+  }
+
+  const resultado = await crearReservaService({ salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados });
 
   if (resultado.ok) return res.status(201).json(resultado.reserva);
 

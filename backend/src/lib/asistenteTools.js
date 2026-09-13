@@ -31,10 +31,10 @@ async function buscarDisponibilidad({ tipo, capacidad_minima, fecha, hora_inicio
   return libres;
 }
 
-async function crearReservaTool({ salon_id, materia, fecha, hora_inicio, hora_fin }, docenteId) {
+async function crearReservaTool({ salon_id, materia, fecha, hora_inicio, hora_fin, asistentes_estimados }, docenteId) {
   const inicio = `${fecha}T${hora_inicio}:00${OFFSET}`;
   const fin = `${fecha}T${hora_fin}:00${OFFSET}`;
-  return crearReserva({ salon_id, docente_id: docenteId, materia, inicio, fin });
+  return crearReserva({ salon_id, docente_id: docenteId, materia, inicio, fin, asistentes_estimados });
 }
 
 const TOOLS = [
@@ -78,6 +78,10 @@ const TOOLS = [
           fecha: { type: 'string', description: 'Fecha en formato YYYY-MM-DD.' },
           hora_inicio: { type: 'string', description: 'Hora de inicio en formato HH:MM de 24 horas.' },
           hora_fin: { type: 'string', description: 'Hora de fin en formato HH:MM de 24 horas.' },
+          asistentes_estimados: {
+            type: ['integer', 'null'],
+            description: 'Cantidad de personas que van a asistir, si el usuario la mencionó. Usa null si no aplica.',
+          },
         },
         required: ['salon_id', 'materia', 'fecha', 'hora_inicio', 'hora_fin'],
       },

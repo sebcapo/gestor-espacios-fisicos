@@ -113,6 +113,7 @@ create table reservas (
   materia_id text references materias(id),
   inicio text not null,
   fin text not null,
+  asistentes_estimados integer,
   estado text not null check (estado in ('PROGRAMADA', 'CANCELADA')) default 'PROGRAMADA',
   es_fija integer not null default 0,
   motivo_cancelacion text,
@@ -120,7 +121,8 @@ create table reservas (
   created_at text not null default (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
 
   -- Evita que el rango de horario esté vacío o invertido
-  constraint periodo_valido check (inicio < fin)
+  constraint periodo_valido check (inicio < fin),
+  constraint asistentes_validos check (asistentes_estimados is null or asistentes_estimados > 0)
 );
 
 create index idx_reservas_salon on reservas(salon_id);

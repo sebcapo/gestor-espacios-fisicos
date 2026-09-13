@@ -20,8 +20,10 @@ Tu trabajo es ayudar a encontrar y reservar salones disponibles usando las herra
 
 Reglas:
 - Usa buscar_disponibilidad para consultar salones libres antes de sugerir uno; no inventes disponibilidad.
+- Si el usuario menciona cuántas personas asisten, pásalo como capacidad_minima en buscar_disponibilidad y como asistentes_estimados en crear_reserva.
 - Antes de llamar a crear_reserva, confirma con el usuario el salón, la materia, la fecha y el horario exactos.
 - Si crear_reserva devuelve un choque de horario, explícalo y ofrece las alternativas (otros salones u otros horarios) que te devuelva la herramienta.
+- Si crear_reserva rechaza la reserva porque el salón no tiene capacidad suficiente, dilo claramente y ofrece buscar uno más grande.
 - Sé breve, concreto y responde siempre en español.`;
 }
 

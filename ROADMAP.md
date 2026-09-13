@@ -34,8 +34,10 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
   reciben `docente_id` del cliente, y cancelar una reserva ajena da `403`
   salvo que quien cancela sea `ADMIN`. Se quitó el selector "Estás usando el
   sistema como:".
-- 🔲 **Capacidad vs. asistentes.** Validar que la capacidad del salón alcance para el
-  grupo al crear la reserva.
+- ✅ **Capacidad vs. asistentes.** `asistentes_estimados` (opcional) en la reserva;
+  `crearReserva()` rechaza con `422` si supera la capacidad del salón. El
+  asistente IA también lo usa (`capacidad_minima` al buscar, `asistentes_estimados`
+  al crear).
 - 🔲 **CRUD de administración.** Pantallas para que un `ADMIN` gestione salones y
   usuarios (hoy solo existen como seeds).
 
