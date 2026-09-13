@@ -25,12 +25,15 @@ Reglas:
 - Sé breve, concreto y responde siempre en español.`;
 }
 
-// POST /api/asistente - Body: { mensaje, historial, docente_id, docente_nombre }
+// POST /api/asistente - Body: { mensaje, historial }
+// El docente es siempre el de la sesión (requireAuth), no un dato del cliente.
 router.post('/', async (req, res) => {
-  const { mensaje, historial = [], docente_id, docente_nombre } = req.body;
+  const { mensaje, historial = [] } = req.body;
+  const docente_id = req.usuario.id;
+  const docente_nombre = req.usuario.nombre;
 
-  if (!mensaje || !docente_id) {
-    return res.status(400).json({ error: 'Faltan campos: mensaje, docente_id' });
+  if (!mensaje) {
+    return res.status(400).json({ error: 'Falta el campo: mensaje' });
   }
 
   const mensajes = [

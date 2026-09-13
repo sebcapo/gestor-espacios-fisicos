@@ -37,6 +37,21 @@ frontend  ──HTTP──>  backend  ──>  SQLite (backend/data/gestor.db)
 - **Clase fija protegida**: otro disparador bloquea la cancelación de reservas
   con `es_fija = 1`.
 
+### Autenticación
+
+Login local con correo y contraseña — no depende de ningún proveedor externo:
+
+- Las contraseñas se guardan con `scrypt` (`node:crypto`, sin dependencias
+  nativas), nunca en texto plano.
+- Al hacer login el backend crea una fila en `sesiones` y manda el token como
+  cookie `httpOnly`; el navegador la reenvía sola en cada petición
+  (`credentials: 'include'` en el frontend, `cors({ credentials: true })` en
+  el backend).
+- Todo `/api/*` exige sesión, excepto `/api/auth/login`. El backend saca el
+  usuario de la cookie, nunca del body: `POST /api/reservas` y
+  `PATCH /:id/cancelar` ya no reciben `docente_id` del cliente.
+- Cancelar una reserva ajena da `403` salvo que quien cancela sea `ADMIN`.
+
 ## Requisitos previos
 
 - **Node.js 24 o superior** (el backend usa el módulo nativo `node:sqlite`;
@@ -63,12 +78,16 @@ horario institucional, carreras/materias):
 npm run seed
 ```
 
+El seed también crea la contraseña de prueba `fumc2026` para todos los
+usuarios sembrados (docentes y admins) — es solo para desarrollo local.
+
 Variables de entorno (`backend/.env`):
 
 | Variable | Descripción |
 |---|---|
 | `GROQ_API_KEY` | API key de Groq (asistente) |
 | `PORT` | Puerto del backend (por defecto `3001`) |
+| `FRONTEND_URL` | Origen del frontend, para CORS con cookies (por defecto `http://localhost:5173`) |
 | `DB_PATH` | Opcional — ruta del archivo SQLite (por defecto `backend/data/gestor.db`) |
 
 Otros comandos útiles:
@@ -91,6 +110,9 @@ npm run dev               # arranca en http://localhost:5173
 
 | Método | Ruta | Descripción |
 |---|---|---|
+| `POST` | `/api/auth/login` | Login con `{ email, password }`; deja la cookie de sesión |
+| `POST` | `/api/auth/logout` | Cierra la sesión actual |
+| `GET` | `/api/auth/me` | Usuario de la sesión actual |
 | `GET` | `/api/salones` | Salones activos |
 | `GET` | `/api/salones/:id/reservas` | Reservas programadas de un salón |
 | `GET` | `/api/usuarios` | Usuarios activos (docentes y admins) |
@@ -118,13 +140,14 @@ backend/
     index.js            Arranque de Express y montaje de rutas
     db.js               Abre/crea la base SQLite (backend/data/gestor.db)
     groqClient.js       Cliente de Groq
-    routes/             Rutas HTTP (salones, reservas, usuarios, asistente, ...)
-    lib/                Lógica de negocio (disponibilidad, servicio de reservas, tools del asistente)
+    routes/             Rutas HTTP (auth, salones, reservas, usuarios, asistente, ...)
+    lib/                Lógica de negocio (auth, disponibilidad, servicio de reservas, tools del asistente)
+    middleware/         requireAuth / requireRol
 frontend/
   src/
     api.js              Cliente del backend
-    App.jsx             Shell con pestañas (mapa / asistente)
-    components/         MapaSalones, SalonModal, ChatAsistente
+    App.jsx             Shell con login y pestañas (mapa / asistente)
+    components/         LoginForm, MapaSalones, SalonModal, ChatAsistente
 ```
 
 ## Hoja de ruta

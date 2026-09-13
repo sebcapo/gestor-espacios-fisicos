@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getUsuarios } from './api';
+import { getUsuarioActual, logout } from './api';
+import LoginForm from './components/LoginForm';
 import MapaSalones from './components/MapaSalones';
 import ChatAsistente from './components/ChatAsistente';
 import './App.css';
@@ -10,18 +11,28 @@ const TABS = [
 ];
 
 function App() {
-  const [usuarios, setUsuarios] = useState([]);
-  const [usuarioActualId, setUsuarioActualId] = useState('');
+  const [usuario, setUsuario] = useState(null);
+  const [cargando, setCargando] = useState(true);
   const [tab, setTab] = useState('mapa');
 
   useEffect(() => {
-    getUsuarios().then((data) => {
-      setUsuarios(data);
-      if (data.length > 0) setUsuarioActualId(data[0].id);
-    });
+    getUsuarioActual()
+      .then(setUsuario)
+      .catch(() => setUsuario(null))
+      .finally(() => setCargando(false));
   }, []);
 
-  const usuarioActual = usuarios.find((u) => u.id === usuarioActualId) || null;
+  async function cerrarSesion() {
+    try {
+      await logout();
+    } finally {
+      setUsuario(null);
+    }
+  }
+
+  if (cargando) return null;
+
+  if (!usuario) return <LoginForm onLogin={setUsuario} />;
 
   return (
     <div className="app-shell">
@@ -31,15 +42,13 @@ function App() {
           <p>Fundación Universitaria María Cano — Sede Medellín</p>
         </div>
 
-        <div className="selector-usuario">
-          <label htmlFor="usuario-actual">Estás usando el sistema como:</label>
-          <select id="usuario-actual" value={usuarioActualId} onChange={(e) => setUsuarioActualId(e.target.value)}>
-            {usuarios.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.nombre} ({u.rol})
-              </option>
-            ))}
-          </select>
+        <div className="usuario-sesion">
+          <span>
+            {usuario.nombre} <span className="badge">{usuario.rol}</span>
+          </span>
+          <button type="button" className="link-btn" onClick={cerrarSesion}>
+            Cerrar sesión
+          </button>
         </div>
       </header>
 
@@ -52,8 +61,8 @@ function App() {
       </nav>
 
       <main>
-        {tab === 'mapa' && <MapaSalones usuarioActual={usuarioActual} />}
-        {tab === 'asistente' && usuarioActual && <ChatAsistente usuarioActual={usuarioActual} />}
+        {tab === 'mapa' && <MapaSalones usuarioActual={usuario} />}
+        {tab === 'asistente' && <ChatAsistente />}
       </main>
     </div>
   );

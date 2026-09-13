@@ -3,6 +3,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 async function apiFetch(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'include', // manda/recibe la cookie httpOnly de sesión
     ...options,
   });
   const data = await res.json().catch(() => null);
@@ -15,15 +16,22 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+export const login = (email, password) =>
+  apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+
+export const logout = () => apiFetch('/api/auth/logout', { method: 'POST' });
+
+export const getUsuarioActual = () => apiFetch('/api/auth/me');
+
 export const getSalones = () => apiFetch('/api/salones');
 export const getUsuarios = () => apiFetch('/api/usuarios');
 export const getReservas = () => apiFetch('/api/reservas');
 export const getMateriasHabilitadas = () => apiFetch('/api/materias/habilitadas');
 
-export const consultarAsistente = ({ mensaje, historial, docente_id, docente_nombre }) =>
+export const consultarAsistente = ({ mensaje, historial }) =>
   apiFetch('/api/asistente', {
     method: 'POST',
-    body: JSON.stringify({ mensaje, historial, docente_id, docente_nombre }),
+    body: JSON.stringify({ mensaje, historial }),
   });
 
 export const crearReserva = (body) =>

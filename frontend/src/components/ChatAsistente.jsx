@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { consultarAsistente } from '../api';
 
-export default function ChatAsistente({ usuarioActual }) {
+export default function ChatAsistente() {
   const [mensajes, setMensajes] = useState([
     { autor: 'asistente', texto: '¡Hola! Cuéntame qué necesitas: tipo de salón, para cuántas personas, y el día y horario.' },
   ]);
@@ -24,12 +24,7 @@ export default function ChatAsistente({ usuarioActual }) {
     setEnviando(true);
 
     try {
-      const resultado = await consultarAsistente({
-        mensaje: texto,
-        historial,
-        docente_id: usuarioActual.id,
-        docente_nombre: usuarioActual.nombre,
-      });
+      const resultado = await consultarAsistente({ mensaje: texto, historial });
       setMensajes((m) => [...m, { autor: 'asistente', texto: resultado.respuesta }]);
       setHistorial(resultado.historial);
     } catch (err) {
