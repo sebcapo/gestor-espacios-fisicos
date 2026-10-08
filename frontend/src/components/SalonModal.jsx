@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { crearReserva, cancelarReserva, getMateriasHabilitadas, aISO, isoAInputs, formatoHora, TIPO_LABEL } from '../api';
+import { crearReserva, cancelarReserva, getMateriasHabilitadas, aISO, isoAInputs, formatoHora, categoriaVisual, CATEGORIAS } from '../api';
 
 export default function SalonModal({ salon, salones, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -105,7 +105,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
 
         <header className="modal-header">
           <h2>{salon.nombre}</h2>
-          <span className="badge">{TIPO_LABEL[salon.tipo] || salon.tipo}</span>
+          <span className="badge">{CATEGORIAS[categoriaVisual(salon)].label}</span>
         </header>
         <p className="salon-meta">
           {salon.ubicacion} · Capacidad: {salon.capacidad}
