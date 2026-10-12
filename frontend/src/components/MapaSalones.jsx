@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { getSalones, getReservas, categoriaVisual, CATEGORIAS, CATEGORIA_GRADIENTE, fotoDifuminada } from '../api';
+import { GraduationCap, FlaskConical, MonitorSmartphone, Theater } from 'lucide-react';
+import { getSalones, getReservas, categoriaVisual, CATEGORIAS, CATEGORIA_GRADIENTE } from '../api';
 import SalonModal from './SalonModal';
+import { SkeletonMapa } from './Skeleton';
+
+const ICONO_CATEGORIA = {
+  AULA_CLASE: GraduationCap,
+  LABORATORIO: FlaskConical,
+  SALA_COMPUTO: MonitorSmartphone,
+  AUDITORIO: Theater,
+};
 
 function claveOrden(ubicacion) {
   const [bloque, piso] = (ubicacion || '').split(' - ');
@@ -13,7 +22,7 @@ function bloqueDe(ubicacion) {
   return (ubicacion || '').split(' - ')[0] || 'Sin bloque';
 }
 
-export default function MapaSalones({ usuarioActual, onStats }) {
+export default function MapaSalones({ usuarioActual, onStats, abrirSalonId, onAbrirConsumido }) {
   const [salones, setSalones] = useState([]);
   const [reservas, setReservas] = useState([]);
   const [estado, setEstado] = useState('cargando'); // cargando | listo | error
@@ -21,6 +30,15 @@ export default function MapaSalones({ usuarioActual, onStats }) {
   const [salonSeleccionadoId, setSalonSeleccionadoId] = useState(null);
   const [filtroCategoria, setFiltroCategoria] = useState('TODOS');
   const [filtroBloque, setFiltroBloque] = useState('TODOS');
+
+  // Si llegamos aquí desde el horario semanal (clic en una reserva), abre
+  // directo ese salón.
+  useEffect(() => {
+    if (abrirSalonId) {
+      setSalonSeleccionadoId(abrirSalonId);
+      onAbrirConsumido?.();
+    }
+  }, [abrirSalonId, onAbrirConsumido]);
 
   const recargar = useCallback(() => {
     return Promise.all([getSalones(), getReservas()])
@@ -117,7 +135,7 @@ export default function MapaSalones({ usuarioActual, onStats }) {
     return [...mapa.entries()];
   }, [secciones]);
 
-  if (estado === 'cargando') return <p className="estado-msg">Cargando mapa de salones...</p>;
+  if (estado === 'cargando') return <SkeletonMapa />;
   if (estado === 'error')
     return (
       <p className="estado-msg error">
@@ -238,6 +256,7 @@ export default function MapaSalones({ usuarioActual, onStats }) {
                             ? `Reservado · ${proximas.length} reserva${proximas.length !== 1 ? 's' : ''}`
                             : 'Libre';
 
+                      const Icono = ICONO_CATEGORIA[categoria] || GraduationCap;
                       return (
                         <button
                           key={salon.id}
@@ -248,9 +267,10 @@ export default function MapaSalones({ usuarioActual, onStats }) {
                           <div
                             className="salon-card-visual"
                             style={{
-                              backgroundImage: `linear-gradient(135deg, ${CATEGORIA_GRADIENTE[categoria][0]}, ${CATEGORIA_GRADIENTE[categoria][1]}), url(${fotoDifuminada(salon.id)})`,
+                              backgroundImage: `linear-gradient(135deg, ${CATEGORIA_GRADIENTE[categoria][0]}, ${CATEGORIA_GRADIENTE[categoria][1]})`,
                             }}
                           >
+                            <Icono className="salon-card-marca" size={64} strokeWidth={1.5} aria-hidden />
                             <span className="card-badge">{CATEGORIAS[categoria].label}</span>
                             <span className={`card-dot ${condicion}`} />
                           </div>

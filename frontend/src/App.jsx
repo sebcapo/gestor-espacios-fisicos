@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
+import { LayoutGrid, CalendarDays, CalendarCheck, Sparkles, LogOut, CircleDot } from 'lucide-react';
 import { getUsuarioActual, logout } from './api';
 import { useTema } from './useTema';
 import LoginForm from './components/LoginForm';
 import MapaSalones from './components/MapaSalones';
+import HorarioSemanal from './components/HorarioSemanal';
+import MisReservas from './components/MisReservas';
 import ChatAsistente from './components/ChatAsistente';
 import './App.css';
 
 const TABS = [
-  { id: 'mapa', label: 'Mapa de salones' },
-  { id: 'asistente', label: 'Asistente IA' },
+  { id: 'mapa', label: 'Mapa de salones', icono: LayoutGrid },
+  { id: 'horario', label: 'Horario semanal', icono: CalendarDays },
+  { id: 'mis-reservas', label: 'Mis reservas', icono: CalendarCheck },
+  { id: 'asistente', label: 'Asistente IA', icono: Sparkles },
 ];
 
 function App() {
@@ -17,6 +22,7 @@ function App() {
   const [cargando, setCargando] = useState(true);
   const [tab, setTab] = useState('mapa');
   const [stats, setStats] = useState(null);
+  const [salonParaAbrir, setSalonParaAbrir] = useState(null);
 
   useEffect(() => {
     getUsuarioActual()
@@ -31,6 +37,11 @@ function App() {
     } finally {
       setUsuario(null);
     }
+  }
+
+  function abrirSalonDesdeHorario(salonId) {
+    setSalonParaAbrir(salonId);
+    setTab('mapa');
   }
 
   if (cargando) return null;
@@ -51,7 +62,7 @@ function App() {
         <div className="app-header-acciones">
           {stats && (
             <span className="pill-libres">
-              <span className="pill-dot" /> {stats.libres}/{stats.total} libres
+              <CircleDot size={14} /> {stats.libres}/{stats.total} libres
             </span>
           )}
 
@@ -65,22 +76,39 @@ function App() {
           <span className="usuario-pill">
             {usuario.nombre} <span className="badge">{usuario.rol}</span>
           </span>
-          <button type="button" className="link-btn link-btn-claro" onClick={cerrarSesion}>
-            Salir
+          <button type="button" className="link-btn link-btn-claro boton-con-icono" onClick={cerrarSesion}>
+            <LogOut size={14} /> Salir
           </button>
         </div>
       </header>
 
       <nav className="tabs">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" className={t.id === tab ? 'tab activa' : 'tab'} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
+        {TABS.map((t) => {
+          const Icono = t.icono;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              className={t.id === tab ? 'tab activa' : 'tab'}
+              onClick={() => setTab(t.id)}
+            >
+              <Icono size={15} /> {t.label}
+            </button>
+          );
+        })}
       </nav>
 
       <main>
-        {tab === 'mapa' && <MapaSalones usuarioActual={usuario} onStats={setStats} />}
+        {tab === 'mapa' && (
+          <MapaSalones
+            usuarioActual={usuario}
+            onStats={setStats}
+            abrirSalonId={salonParaAbrir}
+            onAbrirConsumido={() => setSalonParaAbrir(null)}
+          />
+        )}
+        {tab === 'horario' && <HorarioSemanal onAbrirSalon={abrirSalonDesdeHorario} />}
+        {tab === 'mis-reservas' && <MisReservas usuarioActual={usuario} />}
         {tab === 'asistente' && <ChatAsistente />}
       </main>
     </div>

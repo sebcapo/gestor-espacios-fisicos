@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { X, CalendarPlus } from 'lucide-react';
+import { useToast } from '../Toast';
 import {
   crearReserva,
   cancelarReserva,
@@ -17,6 +19,7 @@ import {
 } from '../api';
 
 export default function SalonModal({ salon, salones, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
+  const toast = useToast();
   const [mostrarForm, setMostrarForm] = useState(false);
   const [materias, setMaterias] = useState([]);
   const [horarioInstitucional, setHorarioInstitucional] = useState([]);
@@ -31,9 +34,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
-  const [advertencia, setAdvertencia] = useState('');
   const [sugerencias, setSugerencias] = useState(null);
-  const [exito, setExito] = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
 
@@ -87,7 +88,6 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
   function actualizar(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
     setError('');
-    setAdvertencia('');
     setSugerencias(null);
   }
 
@@ -95,9 +95,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     e.preventDefault();
     setEnviando(true);
     setError('');
-    setAdvertencia('');
     setSugerencias(null);
-    setExito('');
 
     try {
       const inicio = aISO(form.fecha, form.horaInicio);
@@ -118,8 +116,8 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
       });
 
-      if (creada.advertencia) setAdvertencia(creada.advertencia);
-      setExito('¡Reserva creada con éxito!');
+      toast(`Reserva creada en ${salon.nombre}`, 'exito');
+      if (creada.advertencia) toast(creada.advertencia, 'advertencia', 7000);
       setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '', asistentes: '' });
       setMostrarForm(false);
       await onCambiado();
@@ -148,9 +146,10 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
       await cancelarReserva(id, motivoCancelacion || 'Cancelada desde el mapa de salones');
       setCancelandoId(null);
       setMotivoCancelacion('');
+      toast('Reserva cancelada', 'exito');
       await onCambiado();
     } catch (err) {
-      setError(err.message);
+      toast(err.message, 'error', 6000);
     }
   }
 
@@ -158,7 +157,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button type="button" className="modal-cerrar" onClick={onClose} aria-label="Cerrar">
-          ×
+          <X size={16} />
         </button>
 
         <header className="modal-header">
@@ -208,8 +207,8 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         </div>
 
         {!mostrarForm ? (
-          <button type="button" className="boton-primario" onClick={() => setMostrarForm(true)}>
-            + Reservar este salón
+          <button type="button" className="boton-primario boton-con-icono" onClick={() => setMostrarForm(true)}>
+            <CalendarPlus size={16} /> Reservar este salón
           </button>
         ) : (
           <form className="form-reserva" onSubmit={enviar}>
@@ -331,8 +330,6 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
           </form>
         )}
 
-        {exito && <p className="mensaje-exito">{exito}</p>}
-        {advertencia && <p className="mensaje-advertencia">⚠ {advertencia}</p>}
         {error && <p className="mensaje-error">{error}</p>}
 
         {sugerencias && (

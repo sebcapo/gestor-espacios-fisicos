@@ -63,20 +63,15 @@ export const CATEGORIAS = {
   AUDITORIO: { label: 'Auditorio', sigla: 'AD' },
 };
 
-// Mismos colores que las categorías en App.css, para componer el degradado
-// con foto difuminada de fondo de cada tarjeta (ver MapaSalones.jsx).
+// Degradado de fondo por categoría para la cabecera de cada tarjeta de salón.
+// Todo es CSS puro: no depende de internet (la demo corre local, a veces sin
+// red confiable), a diferencia de las fotos de stock que se usaban antes.
 export const CATEGORIA_GRADIENTE = {
-  AULA_CLASE: ['rgba(30,58,95,.78)', 'rgba(44,90,160,.78)'],
-  LABORATORIO: ['rgba(31,64,55,.78)', 'rgba(45,106,79,.78)'],
-  SALA_COMPUTO: ['rgba(18,58,77,.78)', 'rgba(29,122,140,.78)'],
-  AUDITORIO: ['rgba(43,31,61,.78)', 'rgba(90,61,31,.78)'],
+  AULA_CLASE: ['#1e3a5f', '#2c5aa0'],
+  LABORATORIO: ['#1f4037', '#2d6a4f'],
+  SALA_COMPUTO: ['#123a4d', '#1d7a8c'],
+  AUDITORIO: ['#3a2b1f', '#8a5a2b'],
 };
-
-// Foto de stock difuminada y determinística (mismo seed = misma foto siempre),
-// sin depender de fotos reales de la sede que no tenemos.
-export function fotoDifuminada(seed, ancho = 400, alto = 240) {
-  return `https://picsum.photos/seed/${encodeURIComponent(seed)}/${ancho}/${alto}?blur=2`;
-}
 
 export function categoriaVisual(salon) {
   if (salon.tipo === 'SALA_COMPUTO') return 'SALA_COMPUTO';
@@ -140,4 +135,54 @@ export function isoAInputs(iso) {
   const fecha = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const hora = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   return { fecha, hora };
+}
+
+const DIA_ISO_BOGOTA = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+
+// Un instante ISO -> su fecha, día de la semana y minutos del día en hora de
+// Bogotá (no la del navegador). Se usa para ubicar reservas en la grilla del
+// horario semanal sin que el huso del equipo del evento las corra de lugar.
+export function partesBogota(iso) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Bogota',
+    weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const p = Object.fromEntries(dtf.formatToParts(new Date(iso)).map((x) => [x.type, x.value]));
+  const hora = p.hour === '24' ? 0 : Number(p.hour);
+  return {
+    fecha: `${p.year}-${p.month}-${p.day}`,
+    diaISO: DIA_ISO_BOGOTA[p.weekday],
+    minutos: hora * 60 + Number(p.minute),
+  };
+}
+
+// 'YYYY-MM-DD' de hoy en Bogotá.
+export function hoyBogota() {
+  return partesBogota(new Date().toISOString()).fecha;
+}
+
+// Lunes (YYYY-MM-DD) de la semana que contiene a fechaStr.
+export function lunesDeLaSemana(fechaStr) {
+  const d = new Date(`${fechaStr}T00:00:00Z`);
+  const diaISO = d.getUTCDay() === 0 ? 7 : d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (diaISO - 1));
+  return d.toISOString().slice(0, 10);
+}
+
+// Suma días a una fecha 'YYYY-MM-DD'.
+export function sumarDias(fechaStr, n) {
+  const d = new Date(`${fechaStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+const FMT_FECHA_CORTA = new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+export function fechaCorta(fechaStr) {
+  return FMT_FECHA_CORTA.format(new Date(`${fechaStr}T12:00:00Z`));
 }
