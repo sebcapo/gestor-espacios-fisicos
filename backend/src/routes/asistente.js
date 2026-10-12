@@ -1,6 +1,7 @@
 const express = require('express');
 const groq = require('../groqClient');
 const { buscarDisponibilidad, crearReservaTool, TOOLS } = require('../lib/asistenteTools');
+const { fechaBogota } = require('../lib/horarioInstitucional');
 
 const router = express.Router();
 const MODEL = 'openai/gpt-oss-120b';
@@ -8,7 +9,10 @@ const MAX_PASOS = 5;
 
 function systemPrompt(docenteNombre) {
   const ahora = new Date();
-  const hoy = ahora.toISOString().split('T')[0];
+  // Fecha de Bogotá, no UTC: cerca de medianoche (ej. 11pm en Bogotá = 4am UTC
+  // del día siguiente) un simple toISOString().split('T')[0] le diría al
+  // asistente la fecha equivocada.
+  const hoy = fechaBogota(ahora);
   const diaSemana = new Intl.DateTimeFormat('es-CO', { weekday: 'long', timeZone: 'America/Bogota' }).format(ahora);
 
   return `Eres el asistente de reservas de salones de la Fundación Universitaria María Cano (sede Medellín).

@@ -1,7 +1,7 @@
 const { randomUUID } = require('node:crypto');
 const db = require('../db');
 const { salonesAlternativos, horariosAlternativos } = require('./disponibilidad');
-const { validarHorario } = require('./horarioInstitucional');
+const { validarHorario, fechaBogota } = require('./horarioInstitucional');
 const { validarMateriaEspacio } = require('./academico');
 
 // Trae una reserva con el nombre del salón, del docente y de la materia
@@ -35,6 +35,17 @@ function reservaConDetalle(id) {
 // Crea una reserva. Si hay choque de horario, devuelve sugerencias en vez de
 // solo un error. Usado tanto por POST /api/reservas como por el asistente de IA.
 async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados }) {
+  // Normaliza a un único formato (ISO UTC con "Z") antes de validar o guardar
+  // nada. El formulario manual manda `.toISOString()` (UTC/"Z") y el
+  // asistente de IA arma el string con un offset "-05:00" literal: ambos
+  // representan el instante correcto, pero como texto son distintos, y el
+  // trigger anti-choque en SQLite compara `inicio`/`fin` como texto plano
+  // (SQLite no tiene tipo datetime). Mezclar formatos hacía que dos reservas
+  // en el mismo horario, guardadas por caminos distintos, no se detectaran
+  // como choque. Guardar siempre en el mismo formato es lo que lo arregla.
+  inicio = new Date(inicio).toISOString();
+  fin = new Date(fin).toISOString();
+
   // La reserva debe caer dentro del horario en que la universidad está abierta.
   const horario = await validarHorario({ inicio, fin });
   if (!horario.ok) {
@@ -46,11 +57,11 @@ async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio,
     return { ok: false, status: 404, error: 'Salón no encontrado' };
   }
 
-  // Si la materia exige un tipo de espacio concreto, el salón debe cumplirlo.
+  // El tipo de espacio "ideal" de la materia es solo informativo: un docente
+  // puede reservar cualquier salón disponible si lo necesita (ej. una clase
+  // normal que excepcionalmente requiere una sala de cómputo). No bloquea la
+  // reserva, pero se devuelve como advertencia para mostrarla si se quiere.
   const compat = await validarMateriaEspacio(materia_id, salon_id);
-  if (!compat.ok) {
-    return { ok: false, status: 422, error: compat.motivo };
-  }
 
   // El salón debe tener cupo para el número de asistentes estimado (mismo
   // criterio de "capacidad mínima" que ya usa buscar_disponibilidad).
@@ -69,12 +80,12 @@ async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio,
        values (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, salon_id, docente_id, materia, materia_id || null, inicio, fin, asistentes_estimados || null);
 
-    return { ok: true, reserva: reservaConDetalle(id) };
+    return { ok: true, reserva: reservaConDetalle(id), advertencia: compat.ok ? undefined : compat.motivo };
   } catch (error) {
     // El disparador trg_no_solape_insert aborta el INSERT si ya hay una
     // reserva PROGRAMADA que se cruza en ese salón (ver schema.sql).
     if (error.message && error.message.includes('reserva_solapada')) {
-      const fecha = inicio.split('T')[0];
+      const fecha = fechaBogota(inicio);
       const duracionMinutos = (new Date(fin) - new Date(inicio)) / 60000;
 
       const [otrosSalones, otrosHorarios] = await Promise.all([

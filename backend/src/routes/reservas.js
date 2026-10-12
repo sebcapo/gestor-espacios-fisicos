@@ -58,7 +58,7 @@ router.post('/', async (req, res) => {
 
   const resultado = await crearReservaService({ salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados });
 
-  if (resultado.ok) return res.status(201).json(resultado.reserva);
+  if (resultado.ok) return res.status(201).json({ ...resultado.reserva, advertencia: resultado.advertencia });
 
   const { status, ok, ...body } = resultado;
   res.status(status).json(body);
