@@ -828,6 +828,12 @@ main {
   margin-top: 10px;
 }
 
+.mensaje-advertencia {
+  color: var(--naranja);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
 .sugerencias {
   margin-top: 14px;
   border: 1px solid var(--border);

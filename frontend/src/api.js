@@ -27,6 +27,7 @@ export const getSalones = () => apiFetch('/api/salones');
 export const getUsuarios = () => apiFetch('/api/usuarios');
 export const getReservas = () => apiFetch('/api/reservas');
 export const getMateriasHabilitadas = () => apiFetch('/api/materias/habilitadas');
+export const getHorarioInstitucional = () => apiFetch('/api/horario-institucional');
 
 export const consultarAsistente = ({ mensaje, historial }) =>
   apiFetch('/api/asistente', {
@@ -95,6 +96,42 @@ export const formatoHora = new Intl.DateTimeFormat('es-CO', {
 
 export function aISO(fecha, hora) {
   return new Date(`${fecha}T${hora}`).toISOString();
+}
+
+// 'YYYY-MM-DD' -> día ISO (1 lunes ... 7 domingo). Se construye en UTC porque
+// es una fecha sin hora, así da igual la zona horaria del navegador.
+export function diaSemanaISO(fechaStr) {
+  if (!fechaStr) return null;
+  const dia = new Date(`${fechaStr}T00:00:00Z`).getUTCDay(); // 0 domingo ... 6 sábado
+  return dia === 0 ? 7 : dia;
+}
+
+export function hhmmAMinutos(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+export function minutosAHHMM(min) {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+
+export function minutosALabel(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  const periodo = h < 12 ? 'a. m.' : 'p. m.';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, '0')} ${periodo}`;
+}
+
+// Minutos desde medianoche, cada 30 min, entre apertura y cierre (ambas
+// incluidas como límites: la última parada es el cierre exacto).
+export function generarSlots(horaApertura, horaCierre) {
+  const inicioMin = hhmmAMinutos(horaApertura.slice(0, 5));
+  const finMin = hhmmAMinutos(horaCierre.slice(0, 5));
+  const slots = [];
+  for (let t = inicioMin; t < finMin; t += 30) slots.push(t);
+  slots.push(finMin);
+  return slots;
 }
 
 export function isoAInputs(iso) {

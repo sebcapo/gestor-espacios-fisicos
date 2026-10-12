@@ -1,9 +1,25 @@
-import { useEffect, useState } from 'react';
-import { crearReserva, cancelarReserva, getMateriasHabilitadas, aISO, isoAInputs, formatoHora, categoriaVisual, CATEGORIAS } from '../api';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  crearReserva,
+  cancelarReserva,
+  getMateriasHabilitadas,
+  getHorarioInstitucional,
+  aISO,
+  isoAInputs,
+  formatoHora,
+  categoriaVisual,
+  CATEGORIAS,
+  diaSemanaISO,
+  hhmmAMinutos,
+  minutosAHHMM,
+  minutosALabel,
+  generarSlots,
+} from '../api';
 
 export default function SalonModal({ salon, salones, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
   const [mostrarForm, setMostrarForm] = useState(false);
   const [materias, setMaterias] = useState([]);
+  const [horarioInstitucional, setHorarioInstitucional] = useState([]);
   const [form, setForm] = useState({
     materia: '',
     materia_id: '',
@@ -15,6 +31,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
 
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
+  const [advertencia, setAdvertencia] = useState('');
   const [sugerencias, setSugerencias] = useState(null);
   const [exito, setExito] = useState('');
   const [cancelandoId, setCancelandoId] = useState(null);
@@ -24,7 +41,45 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     getMateriasHabilitadas()
       .then(setMaterias)
       .catch(() => setMaterias([]));
+    getHorarioInstitucional()
+      .then(setHorarioInstitucional)
+      .catch(() => setHorarioInstitucional([]));
   }, []);
+
+  // Franjas de apertura/cierre del día elegido, para ofrecer solo horas
+  // válidas (en vez del selector de hora nativo del navegador, confuso).
+  const franjasDelDia = useMemo(() => {
+    const dia = diaSemanaISO(form.fecha);
+    if (dia == null) return [];
+    return horarioInstitucional.filter((f) => f.dia_semana === dia);
+  }, [horarioInstitucional, form.fecha]);
+
+  const opcionesInicio = useMemo(() => {
+    const out = [];
+    franjasDelDia.forEach((f, franjaIdx) => {
+      generarSlots(f.hora_apertura, f.hora_cierre)
+        .slice(0, -1)
+        .forEach((min) => out.push({ min, franjaIdx }));
+    });
+    return out;
+  }, [franjasDelDia]);
+
+  const franjaDeInicioElegido = useMemo(() => {
+    if (!form.horaInicio) return null;
+    const minElegido = hhmmAMinutos(form.horaInicio);
+    return franjasDelDia.find((f) => {
+      const slots = generarSlots(f.hora_apertura, f.hora_cierre);
+      return minElegido >= slots[0] && minElegido < slots[slots.length - 1];
+    });
+  }, [franjasDelDia, form.horaInicio]);
+
+  const opcionesFin = useMemo(() => {
+    if (!franjaDeInicioElegido) return [];
+    const minInicio = hhmmAMinutos(form.horaInicio);
+    return generarSlots(franjaDeInicioElegido.hora_apertura, franjaDeInicioElegido.hora_cierre).filter(
+      (min) => min > minInicio,
+    );
+  }, [franjaDeInicioElegido, form.horaInicio]);
 
   const ahora = new Date();
   const proximas = reservas.filter((r) => r.fin > ahora);
@@ -32,6 +87,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
   function actualizar(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
     setError('');
+    setAdvertencia('');
     setSugerencias(null);
   }
 
@@ -39,6 +95,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     e.preventDefault();
     setEnviando(true);
     setError('');
+    setAdvertencia('');
     setSugerencias(null);
     setExito('');
 
@@ -52,7 +109,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         return;
       }
 
-      await crearReserva({
+      const creada = await crearReserva({
         salon_id: salon.id,
         materia: form.materia,
         materia_id: form.materia_id || undefined,
@@ -61,6 +118,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
       });
 
+      if (creada.advertencia) setAdvertencia(creada.advertencia);
       setExito('¡Reserva creada con éxito!');
       setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '', asistentes: '' });
       setMostrarForm(false);
@@ -120,7 +178,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
                 <div>
                   <strong>{formatoHora.format(r.inicio)}</strong> — {r.materia} ({r.usuarios?.nombre})
                   {r.asistentes_estimados ? ` · ${r.asistentes_estimados} pers.` : ''}
-                  {r.es_fija && <span className="badge-fija">clase fija</span>}
+                  {Boolean(r.es_fija) && <span className="badge-fija">clase fija</span>}
                 </div>
 
                 {!r.es_fija &&
@@ -198,23 +256,56 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
             <div className="campo-fila">
               <div className="campo">
                 <label htmlFor="fecha">Fecha</label>
-                <input id="fecha" type="date" required value={form.fecha} onChange={(e) => actualizar('fecha', e.target.value)} />
-              </div>
-              <div className="campo">
-                <label htmlFor="horaInicio">Inicio</label>
                 <input
-                  id="horaInicio"
-                  type="time"
+                  id="fecha"
+                  type="date"
                   required
-                  value={form.horaInicio}
-                  onChange={(e) => actualizar('horaInicio', e.target.value)}
+                  value={form.fecha}
+                  onChange={(e) => setForm((f) => ({ ...f, fecha: e.target.value, horaInicio: '', horaFin: '' }))}
                 />
               </div>
               <div className="campo">
+                <label htmlFor="horaInicio">Inicio</label>
+                <select
+                  id="horaInicio"
+                  required
+                  disabled={!form.fecha || opcionesInicio.length === 0}
+                  value={form.horaInicio}
+                  onChange={(e) => setForm((f) => ({ ...f, horaInicio: e.target.value, horaFin: '' }))}
+                >
+                  <option value="" disabled>
+                    {!form.fecha ? 'Elige fecha' : opcionesInicio.length === 0 ? 'Cerrado ese día' : 'Elige hora'}
+                  </option>
+                  {opcionesInicio.map(({ min }) => (
+                    <option key={min} value={minutosAHHMM(min)}>
+                      {minutosALabel(min)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="campo">
                 <label htmlFor="horaFin">Fin</label>
-                <input id="horaFin" type="time" required value={form.horaFin} onChange={(e) => actualizar('horaFin', e.target.value)} />
+                <select
+                  id="horaFin"
+                  required
+                  disabled={!form.horaInicio}
+                  value={form.horaFin}
+                  onChange={(e) => actualizar('horaFin', e.target.value)}
+                >
+                  <option value="" disabled>
+                    {!form.horaInicio ? 'Elige inicio primero' : 'Elige hora'}
+                  </option>
+                  {opcionesFin.map((min) => (
+                    <option key={min} value={minutosAHHMM(min)}>
+                      {minutosALabel(min)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
+            {form.fecha && franjasDelDia.length === 0 && (
+              <p className="mensaje-error">La universidad no abre ese día.</p>
+            )}
 
             <div className="campo">
               <label htmlFor="asistentes">Nº de asistentes (opcional)</label>
@@ -241,6 +332,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         )}
 
         {exito && <p className="mensaje-exito">{exito}</p>}
+        {advertencia && <p className="mensaje-advertencia">⚠ {advertencia}</p>}
         {error && <p className="mensaje-error">{error}</p>}
 
         {sugerencias && (
