@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutGrid, CalendarDays, CalendarCheck, Sparkles, LogOut, CircleDot } from 'lucide-react';
+import { LayoutGrid, CalendarDays, CalendarCheck, Sparkles, Settings, LogOut, CircleDot } from 'lucide-react';
 import { getUsuarioActual, logout } from './api';
 import { useTema } from './useTema';
 import LoginForm from './components/LoginForm';
@@ -7,6 +7,7 @@ import MapaSalones from './components/MapaSalones';
 import HorarioSemanal from './components/HorarioSemanal';
 import MisReservas from './components/MisReservas';
 import ChatAsistente from './components/ChatAsistente';
+import Admin from './components/Admin';
 import './App.css';
 
 const TABS = [
@@ -14,6 +15,7 @@ const TABS = [
   { id: 'horario', label: 'Horario semanal', icono: CalendarDays },
   { id: 'mis-reservas', label: 'Mis reservas', icono: CalendarCheck },
   { id: 'asistente', label: 'Asistente IA', icono: Sparkles },
+  { id: 'admin', label: 'Administración', icono: Settings, soloAdmin: true },
 ];
 
 function App() {
@@ -83,7 +85,7 @@ function App() {
       </header>
 
       <nav className="tabs">
-        {TABS.map((t) => {
+        {TABS.filter((t) => !t.soloAdmin || usuario.rol === 'ADMIN').map((t) => {
           const Icono = t.icono;
           return (
             <button
@@ -110,6 +112,7 @@ function App() {
         {tab === 'horario' && <HorarioSemanal onAbrirSalon={abrirSalonDesdeHorario} />}
         {tab === 'mis-reservas' && <MisReservas usuarioActual={usuario} />}
         {tab === 'asistente' && <ChatAsistente />}
+        {tab === 'admin' && usuario.rol === 'ADMIN' && <Admin usuarioActual={usuario} />}
       </main>
     </div>
   );

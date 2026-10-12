@@ -3,6 +3,7 @@ import { X, CalendarPlus } from 'lucide-react';
 import { useToast } from '../Toast';
 import {
   crearReserva,
+  crearReservaRecurrente,
   cancelarReserva,
   getMateriasHabilitadas,
   getHorarioInstitucional,
@@ -18,6 +19,8 @@ import {
   generarSlots,
 } from '../api';
 
+const NOMBRE_DIA = { 1: 'lunes', 2: 'martes', 3: 'miércoles', 4: 'jueves', 5: 'viernes', 6: 'sábado', 7: 'domingo' };
+
 export default function SalonModal({ salon, salones, reservas, usuarioActual, onClose, onCambiarSalon, onCambiado }) {
   const toast = useToast();
   const [mostrarForm, setMostrarForm] = useState(false);
@@ -30,6 +33,7 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
     horaInicio: '',
     horaFin: '',
     asistentes: '',
+    recurrente: false,
   });
 
   const [enviando, setEnviando] = useState(false);
@@ -107,18 +111,31 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
         return;
       }
 
-      const creada = await crearReserva({
-        salon_id: salon.id,
-        materia: form.materia,
-        materia_id: form.materia_id || undefined,
-        inicio,
-        fin,
-        asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
-      });
-
-      toast(`Reserva creada en ${salon.nombre}`, 'exito');
-      if (creada.advertencia) toast(creada.advertencia, 'advertencia', 7000);
-      setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '', asistentes: '' });
+      if (form.recurrente) {
+        const r = await crearReservaRecurrente({
+          salon_id: salon.id,
+          materia: form.materia,
+          materia_id: form.materia_id || undefined,
+          dia_semana: diaSemanaISO(form.fecha),
+          hora_inicio: form.horaInicio,
+          hora_fin: form.horaFin,
+          asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
+        });
+        const base = `${r.creadas} de ${r.total} sesiones creadas (semestre ${r.semestre})`;
+        toast(r.omitidas.length ? `${base}; ${r.omitidas.length} omitidas por choque u horario` : base, r.omitidas.length ? 'advertencia' : 'exito', 7000);
+      } else {
+        const creada = await crearReserva({
+          salon_id: salon.id,
+          materia: form.materia,
+          materia_id: form.materia_id || undefined,
+          inicio,
+          fin,
+          asistentes_estimados: form.asistentes ? Number(form.asistentes) : undefined,
+        });
+        toast(`Reserva creada en ${salon.nombre}`, 'exito');
+        if (creada.advertencia) toast(creada.advertencia, 'advertencia', 7000);
+      }
+      setForm({ materia: '', materia_id: '', fecha: '', horaInicio: '', horaFin: '', asistentes: '', recurrente: false });
       setMostrarForm(false);
       await onCambiado();
     } catch (err) {
@@ -319,9 +336,23 @@ export default function SalonModal({ salon, salones, reservas, usuarioActual, on
               />
             </div>
 
+            <label className="check-recurrente">
+              <input
+                type="checkbox"
+                checked={form.recurrente}
+                onChange={(e) => setForm((f) => ({ ...f, recurrente: e.target.checked }))}
+              />
+              <span>
+                Repetir cada semana durante el semestre
+                {form.recurrente && form.fecha && (
+                  <span className="check-recurrente-hint"> — todos los {NOMBRE_DIA[diaSemanaISO(form.fecha)]}</span>
+                )}
+              </span>
+            </label>
+
             <div className="modal-acciones">
               <button type="submit" className="boton-primario" disabled={enviando}>
-                {enviando ? 'Creando...' : 'Confirmar reserva'}
+                {enviando ? 'Creando...' : form.recurrente ? 'Crear clase del semestre' : 'Confirmar reserva'}
               </button>
               <button type="button" className="link-btn" onClick={() => setMostrarForm(false)}>
                 Cancelar

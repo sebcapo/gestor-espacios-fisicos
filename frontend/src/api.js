@@ -38,6 +38,18 @@ export const consultarAsistente = ({ mensaje, historial }) =>
 export const crearReserva = (body) =>
   apiFetch('/api/reservas', { method: 'POST', body: JSON.stringify(body) });
 
+export const crearReservaRecurrente = (body) =>
+  apiFetch('/api/reservas/recurrente', { method: 'POST', body: JSON.stringify(body) });
+
+// --- Administración (solo ADMIN) ---
+export const crearSalon = (body) => apiFetch('/api/salones', { method: 'POST', body: JSON.stringify(body) });
+export const editarSalon = (id, body) => apiFetch(`/api/salones/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+export const eliminarSalon = (id) => apiFetch(`/api/salones/${id}`, { method: 'DELETE' });
+
+export const crearUsuario = (body) => apiFetch('/api/usuarios', { method: 'POST', body: JSON.stringify(body) });
+export const editarUsuario = (id, body) => apiFetch(`/api/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
+export const eliminarUsuario = (id) => apiFetch(`/api/usuarios/${id}`, { method: 'DELETE' });
+
 export const cancelarReserva = (id, motivo) =>
   apiFetch(`/api/reservas/${id}/cancelar`, {
     method: 'PATCH',
