@@ -2,14 +2,22 @@ const db = require('../db');
 const { franjasDelDia, diaSemanaDeFecha, OFFSET } = require('./horarioInstitucional');
 
 // ¿Ese salón ya tiene una reserva PROGRAMADA que se solape con [inicio, fin)?
+// `inicio`/`fin` se normalizan a ISO UTC antes de comparar: la columna se
+// guarda siempre en ese formato (ver reservasService.crearReserva), y como
+// SQLite compara fechas como texto plano, comparar contra un formato distinto
+// (ej. con offset "-05:00" en vez de "Z") puede fallar en detectar choques
+// reales aunque representen el mismo instante.
 async function haySolape(salonId, inicio, fin) {
+  const inicioISO = new Date(inicio).toISOString();
+  const finISO = new Date(fin).toISOString();
+
   const fila = db
     .prepare(
       `select 1 from reservas
        where salon_id = ? and estado = 'PROGRAMADA' and inicio < ? and fin > ?
        limit 1`,
     )
-    .get(salonId, fin, inicio);
+    .get(salonId, finISO, inicioISO);
 
   return Boolean(fila);
 }
