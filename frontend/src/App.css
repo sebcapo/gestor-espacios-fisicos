@@ -180,18 +180,34 @@ main {
 .login-shell {
   min-height: 100vh;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: var(--bg);
+}
+
+.login-card-split {
+  width: 100%;
+  max-width: 1040px;
+  min-height: min(620px, 88vh);
+  display: flex;
   flex-wrap: wrap;
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: rgba(16, 24, 40, 0.18) 0 24px 60px -12px, rgba(16, 24, 40, 0.1) 0 8px 20px -8px;
+  position: relative;
 }
 
 .login-visual {
-  flex: 1 1 420px;
+  flex: 1 1 440px;
   min-height: 320px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 40px;
-  background-image: linear-gradient(160deg, rgba(11, 31, 63, 0.9), rgba(22, 58, 110, 0.88) 60%, rgba(28, 74, 138, 0.85)),
-    url('https://picsum.photos/seed/fumc-campus/1200/1400?blur=3');
+  background-image: linear-gradient(160deg, rgba(11, 31, 63, 0.82), rgba(22, 58, 110, 0.78) 55%, rgba(28, 74, 138, 0.72)),
+    url('/edificio-fumc.png');
   background-size: cover;
   background-position: center;
   color: #fff;
@@ -278,9 +294,14 @@ main {
 
 .login-theme-switch {
   position: absolute;
-  top: 24px;
-  right: 24px;
-  color: var(--text);
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  color: var(--text-h);
+  background: var(--surface);
+  padding: 7px 14px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
 }
 
 .login-theme-switch .theme-switch-track {
@@ -297,6 +318,17 @@ main {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.login-form .campo input {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.login-form .boton-ancho {
+  padding: 13px 16px;
+  border-radius: 12px;
+  margin-top: 4px;
 }
 
 .login-form h2 {
