@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { falloServidor } = require('../lib/errores');
 const { crearReserva: crearReservaService, crearReservaRecurrente, reservaConDetalle } = require('../lib/reservasService');
 
 const router = express.Router();
@@ -30,7 +31,7 @@ router.get('/', (req, res) => {
 
     res.json(filas);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 
@@ -128,7 +129,7 @@ router.patch('/:id/cancelar', (req, res) => {
     if (error.message && error.message.includes('clase fija')) {
       return res.status(403).json({ error: 'No se puede cancelar: es una clase fija' });
     }
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 

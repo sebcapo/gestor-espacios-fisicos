@@ -3,6 +3,7 @@ const { randomUUID } = require('node:crypto');
 const db = require('../db');
 const { hashPassword } = require('../lib/auth');
 const { requireRol } = require('../middleware/auth');
+const { falloServidor } = require('../lib/errores');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.get('/', (req, res) => {
       .all();
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 
@@ -43,7 +44,7 @@ router.post('/', requireRol('ADMIN'), (req, res) => {
     );
     res.status(201).json(db.prepare('select id, nombre, email, rol, activo, created_at from usuarios where id = ?').get(id));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    falloServidor(res, err);
   }
 });
 
@@ -67,7 +68,7 @@ router.patch('/:id', requireRol('ADMIN'), (req, res) => {
     }
     res.json(db.prepare('select id, nombre, email, rol, activo, created_at from usuarios where id = ?').get(id));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    falloServidor(res, err);
   }
 });
 
@@ -83,7 +84,7 @@ router.delete('/:id', requireRol('ADMIN'), (req, res) => {
     db.prepare('update usuarios set activo = 0 where id = ?').run(id);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    falloServidor(res, err);
   }
 });
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { falloServidor } = require('../lib/errores');
 
 const router = express.Router();
 
@@ -9,7 +10,7 @@ router.get('/', (req, res) => {
     const data = db.prepare('select * from carreras where activo = 1 order by nombre').all();
     res.json(data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 

@@ -2,10 +2,35 @@ const express = require('express');
 const groq = require('../groqClient');
 const { buscarDisponibilidad, crearReservaTool, TOOLS } = require('../lib/asistenteTools');
 const { fechaBogota } = require('../lib/horarioInstitucional');
+const { falloServidor } = require('../lib/errores');
 
 const router = express.Router();
 const MODEL = 'openai/gpt-oss-120b';
 const MAX_PASOS = 5;
+const MAX_MENSAJE = 2000; // caracteres por mensaje del usuario
+const MAX_HISTORIAL = 30; // turnos recordados (los más recientes)
+const ROLES_PERMITIDOS = new Set(['user', 'assistant', 'tool']);
+
+// El `historial` lo manda el cliente, así que no se puede confiar en él. Se
+// filtra a roles válidos y se recorta a los últimos MAX_HISTORIAL turnos. En
+// particular se descarta cualquier mensaje con role 'system': el único system
+// prompt es el que arma el backend; aceptar uno del cliente permitiría
+// reescribir las reglas del asistente (prompt injection). Se conservan los
+// campos que el tool-calling multivuelta necesita (tool_calls, tool_call_id).
+function sanitizarHistorial(historial) {
+  if (!Array.isArray(historial)) return [];
+  return historial
+    .filter((m) => m && typeof m === 'object' && ROLES_PERMITIDOS.has(m.role))
+    .slice(-MAX_HISTORIAL)
+    .map((m) => {
+      const limpio = { role: m.role };
+      limpio.content = typeof m.content === 'string' ? m.content : m.content == null ? null : String(m.content);
+      if (Array.isArray(m.tool_calls)) limpio.tool_calls = m.tool_calls;
+      if (typeof m.tool_call_id === 'string') limpio.tool_call_id = m.tool_call_id;
+      if (typeof m.name === 'string') limpio.name = m.name;
+      return limpio;
+    });
+}
 
 function systemPrompt(docenteNombre) {
   const ahora = new Date();
@@ -38,13 +63,16 @@ router.post('/', async (req, res) => {
   const docente_id = req.usuario.id;
   const docente_nombre = req.usuario.nombre;
 
-  if (!mensaje) {
+  if (typeof mensaje !== 'string' || mensaje.trim() === '') {
     return res.status(400).json({ error: 'Falta el campo: mensaje' });
+  }
+  if (mensaje.length > MAX_MENSAJE) {
+    return res.status(400).json({ error: `El mensaje supera el máximo de ${MAX_MENSAJE} caracteres` });
   }
 
   const mensajes = [
     { role: 'system', content: systemPrompt(docente_nombre || 'el docente') },
-    ...historial,
+    ...sanitizarHistorial(historial),
     { role: 'user', content: mensaje },
   ];
 
@@ -77,7 +105,10 @@ router.post('/', async (req, res) => {
             resultado = { error: `Herramienta desconocida: ${toolCall.function.name}` };
           }
         } catch (err) {
-          resultado = { error: err.message };
+          // El detalle real va al log; al modelo (y de ahí al usuario) solo le
+          // llega un mensaje genérico, nunca el stack ni el SQL.
+          console.error('[asistente] fallo en herramienta', toolCall.function.name, err);
+          resultado = { error: 'No se pudo completar la operación solicitada.' };
         }
 
         mensajes.push({
@@ -90,7 +121,7 @@ router.post('/', async (req, res) => {
 
     res.status(500).json({ error: 'El asistente no pudo completar la solicitud (demasiados pasos)' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    falloServidor(res, err, 'asistente');
   }
 });
 

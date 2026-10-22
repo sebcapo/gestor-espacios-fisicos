@@ -107,7 +107,8 @@ async function crearReserva({ salon_id, docente_id, materia, materia_id, inicio,
       };
     }
 
-    return { ok: false, status: 500, error: error.message };
+    console.error('[reservas] fallo al crear reserva', error);
+    return { ok: false, status: 500, error: 'Error interno al crear la reserva' };
   }
 }
 
