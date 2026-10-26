@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
-const { crearReserva: crearReservaService, reservaConDetalle } = require('../lib/reservasService');
+const { falloServidor } = require('../lib/errores');
+const { crearReserva: crearReservaService, crearReservaRecurrente, reservaConDetalle } = require('../lib/reservasService');
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.get('/', (req, res) => {
 
     res.json(filas);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 
@@ -58,7 +59,40 @@ router.post('/', async (req, res) => {
 
   const resultado = await crearReservaService({ salon_id, docente_id, materia, materia_id, inicio, fin, asistentes_estimados });
 
-  if (resultado.ok) return res.status(201).json(resultado.reserva);
+  if (resultado.ok) return res.status(201).json({ ...resultado.reserva, advertencia: resultado.advertencia });
+
+  const { status, ok, ...body } = resultado;
+  res.status(status).json(body);
+});
+
+// POST /api/reservas/recurrente - crea una clase semanal para todo el semestre
+// vigente. Body: { salon_id, materia, materia_id?, dia_semana (1-7),
+// hora_inicio 'HH:MM', hora_fin 'HH:MM', asistentes_estimados? }
+// Las sesiones que choquen o caigan fuera de horario se omiten y se reportan.
+router.post('/recurrente', async (req, res) => {
+  const { salon_id, materia, materia_id, dia_semana, hora_inicio, hora_fin, asistentes_estimados } = req.body;
+  const docente_id = req.usuario.id;
+
+  if (!salon_id || !materia || !dia_semana || !hora_inicio || !hora_fin) {
+    return res.status(400).json({ error: 'Faltan campos: salon_id, materia, dia_semana, hora_inicio, hora_fin' });
+  }
+  if (!Number.isInteger(dia_semana) || dia_semana < 1 || dia_semana > 7) {
+    return res.status(400).json({ error: 'dia_semana debe ser un entero de 1 (lunes) a 7 (domingo)' });
+  }
+  if (hora_inicio >= hora_fin) {
+    return res.status(400).json({ error: 'La hora de inicio debe ser anterior a la hora de fin' });
+  }
+
+  const resultado = await crearReservaRecurrente({
+    salon_id,
+    docente_id,
+    materia,
+    materia_id,
+    dia_semana,
+    hora_inicio,
+    hora_fin,
+    asistentes_estimados,
+  });
 
   const { status, ok, ...body } = resultado;
   res.status(status).json(body);
@@ -95,7 +129,7 @@ router.patch('/:id/cancelar', (req, res) => {
     if (error.message && error.message.includes('clase fija')) {
       return res.status(403).json({ error: 'No se puede cancelar: es una clase fija' });
     }
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 

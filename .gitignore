@@ -8,3 +8,6 @@ dist/
 
 # base de datos local (SQLite)
 backend/data/
+
+# configuración local del editor
+.vscode/

@@ -43,6 +43,14 @@ function diaSemanaDeFecha(fecha) {
   return partesBogota(new Date(`${fecha}T12:00:00${OFFSET}`)).diaSemana;
 }
 
+// Cualquier instante (Date o string ISO, en el offset que sea) -> 'YYYY-MM-DD'
+// en hora de Bogotá. Reemplaza el error común de hacer isoString.split('T')[0],
+// que da la fecha en UTC y puede quedar un día adelantada/atrasada cerca de
+// la medianoche de Bogotá.
+function fechaBogota(instante) {
+  return partesBogota(new Date(instante)).fecha;
+}
+
 // Franjas activas de un día: [{ aperturaMin, cierreMin, hora_apertura, hora_cierre }]
 async function franjasDelDia(diaSemana) {
   const filas = db
@@ -89,4 +97,4 @@ async function validarHorario({ inicio, fin }) {
   return { ok: true };
 }
 
-module.exports = { validarHorario, franjasDelDia, diaSemanaDeFecha, nombreDia, OFFSET };
+module.exports = { validarHorario, franjasDelDia, diaSemanaDeFecha, fechaBogota, nombreDia, OFFSET };

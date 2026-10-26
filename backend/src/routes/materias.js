@@ -1,5 +1,6 @@
 const express = require('express');
 const db = require('../db');
+const { falloServidor } = require('../lib/errores');
 const { semestreVigente } = require('../lib/academico');
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.get('/', (req, res) => {
       .all();
     res.json(filas.map(conCarrera));
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    falloServidor(res, error);
   }
 });
 
@@ -49,7 +50,7 @@ router.get('/habilitadas', async (req, res) => {
     const materias = filas.filter((m) => m.activo).map(conCarrera);
     res.json(materias);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    falloServidor(res, err);
   }
 });
 
