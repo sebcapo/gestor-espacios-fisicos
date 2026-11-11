@@ -1552,3 +1552,197 @@ main {
   color: var(--accent);
   font-weight: 500;
 }
+
+/* ---------- Reportes de ocupación ---------- */
+.reportes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  transition: opacity 0.15s;
+}
+
+.reportes.cargando {
+  opacity: 0.6;
+}
+
+.reportes-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.reportes-fechas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.reportes-fechas label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.reportes-fechas input {
+  font: inherit;
+  color: var(--text-h);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+.reporte-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Mapa de calor: un solo tono, de claro a oscuro según la ocupación. */
+.calor-wrap,
+.uso-tabla-wrap {
+  overflow-x: auto;
+}
+
+.calor {
+  width: 100%;
+  min-width: 420px;
+  border-collapse: separate;
+  border-spacing: 3px;
+  table-layout: fixed;
+}
+
+.calor th {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.calor tbody th {
+  width: 78px;
+  text-align: right;
+  padding-right: 8px;
+  white-space: nowrap;
+}
+
+.calor td {
+  padding: 0;
+}
+
+.calor-celda {
+  position: relative;
+  display: block;
+  height: 26px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) var(--intensidad, 0%), var(--code-bg));
+}
+
+.calor-celda:hover {
+  outline: 2px solid var(--text-h);
+  outline-offset: 1px;
+}
+
+.calor-celda.cerrado {
+  background: repeating-linear-gradient(135deg, transparent 0 5px, var(--border) 5px 6px);
+}
+
+.calor-leyenda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.calor-leyenda-barra {
+  width: 90px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--code-bg), var(--accent));
+}
+
+.uso-tabla {
+  width: 100%;
+  min-width: 520px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.uso-tabla th {
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.uso-tabla td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-h);
+}
+
+.uso-tabla tr:last-child td {
+  border-bottom: none;
+}
+
+.uso-tabla .uso-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.uso-tabla tr.sin-uso td {
+  color: var(--text);
+}
+
+.uso-barra-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uso-barra {
+  flex: 1;
+  min-width: 80px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  overflow: hidden;
+}
+
+.uso-barra > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+}
+
+.uso-pct {
+  width: 52px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cuatro indicadores: en 2 × 2 para que no quede uno suelto en otra fila. */
+.reportes .stats-row {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}

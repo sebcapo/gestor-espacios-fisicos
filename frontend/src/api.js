@@ -50,6 +50,10 @@ export const crearUsuario = (body) => apiFetch('/api/usuarios', { method: 'POST'
 export const editarUsuario = (id, body) => apiFetch(`/api/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(body) });
 export const eliminarUsuario = (id) => apiFetch(`/api/usuarios/${id}`, { method: 'DELETE' });
 
+// Sin fechas, el backend usa el semestre vigente.
+export const getReporteOcupacion = (desde, hasta) =>
+  apiFetch(desde && hasta ? `/api/reportes/ocupacion?desde=${desde}&hasta=${hasta}` : '/api/reportes/ocupacion');
+
 export const cancelarReserva = (id, motivo) =>
   apiFetch(`/api/reservas/${id}/cancelar`, {
     method: 'PATCH',

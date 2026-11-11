@@ -73,9 +73,10 @@ usable. Leyenda: ✅ hecho · 🚧 en curso · 🔲 pendiente
 ## 🔲 Fase 4 — Visualización y reportes
 
 - 🔲 Horario semanal (día × hora) con filtros por salón, bloque, carrera, docente.
-- 🔲 Ocupación por salón: % de uso sobre el horario institucional, huecos libres.
-- 🔲 Exportar a CSV y PDF (por salón, por carrera, por docente).
-- 🔲 Indicadores: salones subutilizados, franjas saturadas.
+- ✅ Ocupación por salón: % de uso sobre el horario institucional (Administración → Reportes).
+- ✅ Indicadores: salones sin uso, franja más ocupada, mapa de calor día × hora, cancelaciones.
+- ✅ Exportar la ocupación por salón a CSV.
+- 🔲 Exportar a PDF y reportes por carrera y por docente.
 
 ---
 

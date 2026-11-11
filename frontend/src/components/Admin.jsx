@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, DoorOpen, Users } from 'lucide-react';
+import { Plus, Pencil, Trash2, DoorOpen, Users, BarChart3 } from 'lucide-react';
 import {
   getSalones,
   getUsuarios,
@@ -12,6 +12,7 @@ import {
   TIPO_LABEL,
 } from '../api';
 import { useToast } from '../Toast';
+import Reportes from './Reportes';
 
 const SALON_VACIO = { nombre: '', tipo: 'SALON', capacidad: 30, ubicacion: '' };
 const USUARIO_VACIO = { nombre: '', email: '', rol: 'DOCENTE', password: '' };
@@ -109,6 +110,13 @@ export default function Admin({ usuarioActual }) {
           onClick={() => setSeccion('usuarios')}
         >
           <Users size={14} /> Usuarios
+        </button>
+        <button
+          type="button"
+          className={seccion === 'reportes' ? 'chip-bloque activo' : 'chip-bloque'}
+          onClick={() => setSeccion('reportes')}
+        >
+          <BarChart3 size={14} /> Reportes
         </button>
       </div>
 
@@ -230,6 +238,8 @@ export default function Admin({ usuarioActual }) {
           </div>
         </section>
       )}
+
+      {seccion === 'reportes' && <Reportes />}
     </div>
   );
 }

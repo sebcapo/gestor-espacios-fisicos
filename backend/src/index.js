@@ -12,6 +12,7 @@ const horarioRouter = require('./routes/horario');
 const carrerasRouter = require('./routes/carreras');
 const semestresRouter = require('./routes/semestres');
 const materiasRouter = require('./routes/materias');
+const reportesRouter = require('./routes/reportes');
 const { requireAuth } = require('./middleware/auth');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/horario-institucional', horarioRouter);
 app.use('/api/carreras', carrerasRouter);
 app.use('/api/semestres', semestresRouter);
 app.use('/api/materias', materiasRouter);
+app.use('/api/reportes', reportesRouter);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -96,6 +96,7 @@ Otros comandos útiles:
 
 | Comando | Qué hace |
 |---|---|
+| `npm run seed:demo` | Carga una parrilla de clases semanales de ejemplo en el semestre vigente (para el horario y los reportes) |
 | `npm run db:reset` | Borra la base de datos local para empezar de cero |
 | `npm run db:reset -- --seed` | Borra y vuelve a cargar los datos de ejemplo en un solo paso |
 
@@ -127,6 +128,7 @@ npm run dev               # arranca en http://localhost:5173
 | `GET` | `/api/semestres` | Semestres (`?estado=VIGENTE` para filtrar) |
 | `GET` | `/api/materias` | Materias activas, con su carrera |
 | `GET` | `/api/materias/habilitadas` | Materias del semestre vigente |
+| `GET` | `/api/reportes/ocupacion` | Reporte de ocupación (solo `ADMIN`); `?desde=&hasta=` en `YYYY-MM-DD`, por defecto el semestre vigente |
 
 ## Estructura del repositorio
 
